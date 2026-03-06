@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stream Chat Overlay</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap">
+
+<style>
+
+html, body{
+margin:0;
+padding:0;
+width:100%;
+height:100%;
+background:transparent;
+font-family:Roboto;
+overflow:hidden;
+}
+
+#chat-container{
+display:flex;
+flex-direction:column-reverse;
+height:100vh;
+width:95vw;
+max-width:900px;
+margin:auto;
+overflow:hidden;
+}
+
+.message{
+
+display:flex;
+align-items:flex-start;
+
+background:rgba(35,35,55,.85);
+border-radius:14px;
+
+padding:14px 16px;
+margin-bottom:10px;
+
+backdrop-filter:blur(8px);
+
+box-shadow:
+0 6px 18px rgba(0,0,0,.35);
+
+opacity:0;
+transform:translateY(-20px);
+animation:messageIn .4s ease forwards;
+}
+
+@keyframes messageIn{
+
+0%{
+opacity:0;
+transform:translateY(-20px) scale(.95);
+}
+
+100%{
+opacity:1;
+transform:translateY(0) scale(1);
+}
+
+}
+
+.avatar-wrapper{
+
+width:42px;
+height:42px;
+border-radius:50%;
+overflow:hidden;
+margin-right:10px;
+flex-shrink:0;
+
+border:2px solid rgba(255,255,255,.15);
+}
+
+.avatar{
+width:100%;
+height:100%;
+background-size:cover;
+background-position:center;
+}
+
+.content{
+flex:1;
+}
+
+.name-row{
+display:flex;
+align-items:center;
+flex-wrap:wrap;
+margin-bottom:4px;
+}
+
+.name{
+
+font-size:1.15em;
+font-weight:700;
+margin-right:6px;
+color:white;
+
+text-shadow:0 0 6px rgba(255,255,255,.4);
+}
+
+.source-icon{
+width:16px;
+height:16px;
+margin-right:4px;
+}
+
+.badge{
+height:1.1em;
+margin-left:4px;
+}
+
+.text{
+
+font-size:1.35em;
+line-height:1.35;
+color:white;
+
+word-wrap:break-word;
+}
+
+.text img{
+
+max-width:90px;
+max-height:26px;
+vertical-align:middle;
+}
+
+.donation{
+
+color:#ffd700;
+font-weight:700;
+margin-top:4px;
+
+text-shadow:
+0 0 6px rgba(255,215,0,.7);
+}
+
+.large-image{
+
+max-width:100%;
+border-radius:10px;
+margin-top:6px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="chat-container"></div>
+
+<script>
+
+var urlParams = new URLSearchParams(window.location.search);
+var roomID = "iWWnKL28tQ";
+
+if(urlParams.has("session")){
+roomID = urlParams.get("session");
+}
+
+var password="false";
+var featuredMode=false;
+
+const chatContainer=document.getElementById("chat-container");
+
+function addMessageToOverlay(data){
+
+if(!(data.chatmessage || data.donation || data.hasDonation) && !data.chatname){
+return;
+}
+
+const messageDiv=document.createElement("div");
+messageDiv.classList.add("message");
+
+data.sourceicon="https://socialstream.ninja/sources/images/"+data.type+".png";
+
+var chatbadges="";
+
+if(data.chatbadges){
+data.chatbadges.forEach(badge=>{
+
+if(typeof badge==="object"){
+
+if(badge.type==="img"){
+chatbadges+=`<img class="badge" src="${badge.src}">`
+}
+
+else if(badge.type==="svg"){
+chatbadges+=`<span class="badge">${badge.html}</span>`
+}
+
+}else{
+chatbadges+=`<img class="badge" src="${badge}">`
+}
+
+})
+}
+
+messageDiv.innerHTML=`
+
+${data.chatimg ?
+`<div class="avatar-wrapper"><div class="avatar" style="background-image:url('${data.chatimg}')"></div></div>`
+: ""}
+
+<div class="content">
+
+<div class="name-row">
+
+${data.chatname ? `<div class="name">${data.chatname}</div>` : ""}
+
+${data.sourceicon ? `<img src="${data.sourceicon}" class="source-icon">` : ""}
+
+${chatbadges}
+
+</div>
+
+<div class="text">${data.chatmessage ? data.chatmessage : ""}</div>
+
+${data.hasDonation ? `<div class="donation">${data.hasDonation}</div>` : ""}
+
+${data.contentimg ? `<img src="${data.contentimg}" class="large-image">` : ""}
+
+</div>
+
+`
+
+chatContainer.prepend(messageDiv)
+
+while(chatContainer.children.length>20){
+chatContainer.removeChild(chatContainer.lastChild)
+}
+
+}
+
+var iframe=document.createElement("iframe");
+
+iframe.src="https://vdo.socialstream.ninja/?ln&salt=vdo.ninja&password="+password+"&push&label=dock&vd=0&ad=0&novideo&noaudio&autostart&cleanoutput&room="+roomID;
+
+iframe.style.cssText="width:0;height:0;position:fixed;left:-100px;top:-100px;";
+
+document.body.appendChild(iframe);
+
+window.addEventListener("message",function(e){
+
+if(e.source!=iframe.contentWindow) return;
+
+if(e.data.dataReceived && e.data.dataReceived.overlayNinja){
+addMessageToOverlay(e.data.dataReceived.overlayNinja);
+}
+
+});
+
+</script>
+
+</body>
+</html>
