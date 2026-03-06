@@ -1,0 +1,254 @@
+<!--
+Development Notes:
+- It's important that the IFRAME logic stay intact, as it is how we receive messages
+- This code is in vanilla Javascript designed for web browsers without compiling
+- Details of the incoming message structure can be found here: https://github.com/steveseguin/social_stream/blob/main/README.md#message-structure
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rainbow Chat Overlay</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap">
+<style>
+@import url('https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap');
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: Roboto;
+    background-color: #0000;
+}
+
+#chat-container {
+    padding: 0;
+    max-width: 450px;
+    margin: auto;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+#chat-container::-webkit-scrollbar { display: none; }
+
+.message {
+    background: linear-gradient(145deg, rgba(41,24,84,0.85), rgba(89,35,119,0.75));
+    padding: 18px;
+    margin-bottom: 20px;
+    border-radius: 18px;
+    border: 2px solid rgba(255,255,255,0.15);
+    box-shadow: 0 4px 20px rgba(150,90,255,0.25), inset 0 0 25px rgba(255,255,255,0.12);
+    color: #fff;
+    transition: all 0.3s ease-in-out;
+    opacity: 0;
+    transform: translateY(-20px);
+    animation: slideFadeIn 0.5s ease forwards;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    word-wrap: break-word;
+    max-width: 100%;
+    flex-shrink: 0;
+}
+
+.message::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent 0%, rgba(255,0,255,0.12) 25%, transparent 50%, rgba(0,255,255,0.12) 75%, transparent 100%);
+    animation: rainbow-shine 8s linear infinite;
+    pointer-events: none;
+}
+
+.message:hover::before { animation-duration: 4s; }
+
+@keyframes rainbow-shine { 0%{transform:rotate(0deg) scale(1);}50%{transform:rotate(180deg) scale(1.1);}100%{transform:rotate(360deg) scale(1);} }
+
+@keyframes slideFadeIn { 0%{opacity:0; transform:translateY(-20px) scale(0.95);} 100%{opacity:1; transform:translateY(0) scale(1);} }
+
+.name { 
+    color: #fff;
+    font-size: 1.4em; /* bigger name text */
+    font-weight: 700;
+    text-shadow: 0 0 12px rgba(255,255,255,0.5), 0 0 24px rgba(255,255,255,0.3);
+}
+
+.name-bg {
+    background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96c3eb, #ff6b6b);
+    padding: 8px 14px; /* slightly larger padding */
+    border-radius: 14px;
+    display: inline-block;
+    vertical-align: middle;
+    animation: bg-shimmer 12s linear infinite;
+    background-size: 500% 100%;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+}
+
+@keyframes bg-shimmer { 0%{background-position:0% 50%;} 100%{background-position:500% 50%;} }
+
+.text {
+    font-size: 1.15em; /* larger message text */
+    line-height: 1.6;
+    margin: 12px 0;
+    text-shadow: 0 0 3px rgba(255,255,255,0.35);
+    overflow-wrap: break-word;
+}
+
+.text img {
+    max-width: 140px; /* larger emotes/images */
+    max-height: 32px;
+    vertical-align: bottom;
+    border-radius: 4px;
+}
+
+.donation {
+    color: #ffd700;
+    font-weight: 700;
+    text-shadow: 0 0 12px rgba(255,215,0,0.5), 0 0 24px rgba(255,215,0,0.3);
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: rgba(255,215,0,0.15);
+}
+
+.membership-status {
+    color: #ffd700;
+    font-weight: 700;
+    font-size: 1em; /* bigger membership */
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px rgba(255,215,0,0.6), 0 0 20px rgba(255,215,0,0.4);
+}
+
+.large-image {
+    max-width: 100%;
+    height: auto;
+    margin-top: 12px;
+    border-radius: 14px;
+    border: 2px solid rgba(255,255,255,0.15);
+    box-shadow: 0 4px 18px rgba(0,0,0,0.2);
+}
+
+.avatar-wrapper {
+    width: 70px; /* bigger avatar */
+    height: 70px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 18px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(45deg, #ff6b6b,#4ecdc4,#45b7d1,#96c3eb,#ff6b6b);
+    padding: 4px;
+    vertical-align: middle;
+    animation: border-rainbow 6s linear infinite;
+    background-size: 500% 500%;
+    box-shadow: 0 3px 18px rgba(150,90,255,0.35);
+}
+
+@keyframes border-rainbow { 0%{background-position:0% 0%;}50%{background-position:100% 100%;}100%{background-position:0% 0%;} }
+
+.avatar { width: 100%; height: 100%; border-radius: 50%; background-size: cover; border: 2px solid rgba(255,255,255,0.25); }
+
+.source-icon { width: 28px; height: 28px; margin: 0 6px; filter: drop-shadow(0 0 4px rgba(255,255,255,0.6)); }
+
+.badge { display: inline-block; height: 1.4em; margin-left: 6px; vertical-align: middle; filter: drop-shadow(0 0 4px rgba(255,255,255,0.5)); transition: filter 0.3s ease; }
+
+.badge:hover { filter: drop-shadow(0 0 6px rgba(255,255,255,0.7)); }
+
+</style>
+</head>
+<body>
+<div id="chat-container"></div>
+<script>
+var urlParams = new URLSearchParams(window.location.search);
+var roomID = "iWWnKL28tQ";
+if(urlParams.has("session")) roomID = urlParams.get("session");
+var password = "false";
+var featuredMode = false;
+
+const chatContainer = document.getElementById('chat-container');
+
+function addMessageToOverlay(data){
+    if(!(data.chatmessage||data.donation||data.hasDonation)&&!data.chatname) return;
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message');
+    if(data.mid) messageDiv.id = data.mid;
+    data.sourceicon = "https://socialstream.ninja/sources/images/"+data.type+".png";
+
+    var chatbadges = "";
+    if(data.chatbadges){
+        data.chatbadges.forEach(badge=>{
+            if(typeof badge==="object"){
+                if(badge.type==="img"&&badge.src){ chatbadges+=`<img class='badge' src='${badge.src}' />`; }
+                else if(badge.type==="svg"&&badge.html){ chatbadges+=`<span class='badge svg'>${badge.html}</span>`; }
+            } else { chatbadges+=`<img class='badge' src='${badge}' />`; }
+        });
+    }
+
+    messageDiv.innerHTML = `
+        ${data.chatimg?`<div class="avatar-wrapper"><div class="avatar" style="background-image: url('${data.chatimg}');"></div></div>`:''}
+        ${data.chatname?`<div class="name-bg"><div class="name" ${data.nameColor?`style="text-shadow:0 0 3px ${data.nameColor}"`:''}>${data.chatname}</div></div>`:''}
+        ${data.sourceicon?`<img src="${data.sourceicon}" alt="Channel Source" class="source-icon">`:''}
+        ${chatbadges}
+        ${data.membership?`<div class="membership-status">${data.membership}</div>`:''}
+        <div class="text" ${data.event?'style="font-style: italic;"':''}>${data.chatmessage?data.chatmessage:''}</div>
+        ${data.hasDonation?`<div class="donation">${data.hasDonation}</div>`:''}
+        ${data.contentimg?`<img src="${data.contentimg}" alt="Large Content" class="large-image" onerror="this.style.display='none';">`:''}
+    `;
+    
+    Array.from(chatContainer.children).forEach(child=>{child.style.transform='translateY('+messageDiv.offsetHeight+'px)';});
+    chatContainer.prepend(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    while(chatContainer.children.length>20) chatContainer.removeChild(chatContainer.lastChild);
+    setTimeout(()=>{ Array.from(chatContainer.children).forEach(child=>{child.style.transform='';}); },500);
+}
+
+// P2P iframe (keep intact)
+var iframe = document.createElement("iframe");
+if(featuredMode){
+    iframe.src = `https://vdo.socialstream.ninja/?ln&password=${password}&salt=vdo.ninja&label=overlay&exclude=${roomID}&scene&novideo&noaudio&cleanoutput&room=${roomID}`;
+} else {
+    iframe.src = "https://vdo.socialstream.ninja/?ln&salt=vdo.ninja&password="+password+"&push&label=dock&vd=0&ad=0&novideo&noaudio&autostart&cleanoutput&room="+roomID; 
+}
+iframe.style.cssText = "width:0px;height:0px;position:fixed;left:-100px;top:-100px;";
+document.body.appendChild(iframe);
+window.addEventListener("message", function(e){ if(e.source!=iframe.contentWindow)return; if(e.data.dataReceived&&e.data.dataReceived.overlayNinja)addMessageToOverlay(e.data.dataReceived.overlayNinja); });
+
+// WebSocket fallback
+var conCon=1; var socketserver=false;
+var serverURL = urlParams.has("localserver")?"ws://127.0.0.1:3000":"wss://io.socialstream.ninja";
+
+function setupSocket(){
+    socketserver.onclose = function(){setTimeout(function(){conCon++;socketserver=new WebSocket(serverURL);setupSocket();},100*conCon);};
+    socketserver.onopen=function(){conCon=1;socketserver.send(JSON.stringify({"join":roomID,"out":3,"in":4}));};
+    socketserver.addEventListener('message',function(event){
+        if(event.data){
+            var data=JSON.parse(event.data);
+            addMessageToOverlay(data);
+            if(data.get){
+                var ret={callback:{get:data.get,result:true}};
+                socketserver.send(JSON.stringify(ret));
+            }
+        }
+    });
+}
+
+if(urlParams.has("server")||urlParams.has("server2")){
+    serverURL=urlParams.get("server")||urlParams.get("server2")||serverURL;
+    socketserver=new WebSocket(serverURL);
+    setupSocket();
+}
+
+</script>
+</body>
+</html>
