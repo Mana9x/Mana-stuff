@@ -1,0 +1,164 @@
+using System;
+using System.Collections.Generic;
+
+public class CPHInline
+{
+    public bool Execute()
+    {
+        string user = args["user"].ToString();
+        string userId = args["userId"].ToString();
+        string commandId = args["commandId"].ToString();
+
+        bool monsterActive = CPH.GetGlobalVar<bool>("MonsterActive", true);
+        if (!monsterActive)
+        {
+            CPH.SendMessage($"@{user}, there is no monster to fight right now!");
+            CPH.CommandRemoveUserCooldown(commandId, userId, Platform.Twitch);
+            return false;
+        }
+
+        string fighterList = CPH.GetGlobalVar<string>("MonsterFighters", true) ?? "";
+        List<string> fighters = new List<string>(
+            fighterList.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+        );
+
+        foreach (string entry in fighters)
+        {
+            string existingUser = entry.Split(':')[0];
+            if (existingUser == user)
+            {
+                CPH.CommandRemoveUserCooldown(commandId, userId, Platform.Twitch);
+                return false;
+            }
+        }
+
+        string[] roles = { "Warrior", "Archer", "Mage", "Rogue", "Paladin", "Berserker" };
+        Random rng = new Random();
+        string role = roles[rng.Next(roles.Length)];
+
+        fighters.Add($"{user}:{role}");
+        CPH.SetGlobalVar("MonsterFighters", string.Join(",", fighters), true);
+
+        string monsterName = CPH.GetGlobalVar<string>("ActiveMonsterName", true);
+        bool windowOpen = CPH.GetGlobalVar<bool>("MonsterJoinWindowOpen", true);
+
+        if (!windowOpen)
+        {
+            string firstMessage = "";
+            switch (role)
+            {
+                case "Warrior":
+                    string[] warriorFirst = {
+                        $"⚔️ @{user} the Warrior charges headfirst at the {monsterName} with a battle cry! Others still have time to join the battle! Type !fight to join!",
+                        $"⚔️ @{user} the Warrior plants their feet and challenges the {monsterName} to combat! There is still time to join the battle! Type !fight to join!",
+                        $"⚔️ @{user} the Warrior unsheathes their blade and stands between chat and the {monsterName}! Join them in battle! Type !fight to join!"
+                    };
+                    firstMessage = warriorFirst[rng.Next(warriorFirst.Length)];
+                    break;
+                case "Archer":
+                    string[] archerFirst = {
+                        $"🏹 @{user} the Archer fires the opening shot at the {monsterName}! There is still time to join the battle! Type !fight to join!",
+                        $"🏹 @{user} the Archer notches an arrow and takes aim at the {monsterName}! Others can still join the battle! Type !fight to join!",
+                        $"🏹 @{user} the Archer strikes the {monsterName} from a distance! Rally to their side and join the battle! Type !fight to join!"
+                    };
+                    firstMessage = archerFirst[rng.Next(archerFirst.Length)];
+                    break;
+                case "Mage":
+                    string[] mageFirst = {
+                        $"🧙 @{user} the Mage begins channeling devastating magic at the {monsterName}! There is still time to join the battle! Type !fight to join!",
+                        $"🧙 @{user} the Mage hurls a crackling spell at the {monsterName}! Others can still join the battle! Type !fight to join!",
+                        $"🧙 @{user} the Mage steps forward and unleashes arcane fury on the {monsterName}! Join them in battle! Type !fight to join!"
+                    };
+                    firstMessage = mageFirst[rng.Next(mageFirst.Length)];
+                    break;
+                case "Rogue":
+                    string[] rogueFirst = {
+                        $"🗡️ @{user} the Rogue leaps from the shadows and ambushes the {monsterName}! There is still time to join the battle! Type !fight to join!",
+                        $"🗡️ @{user} the Rogue strikes first with a vicious sneak attack on the {monsterName}! Others can still join the battle! Type !fight to join!",
+                        $"🗡️ @{user} the Rogue vanishes and reappears behind the {monsterName} with daggers drawn! Join them in battle! Type !fight to join!"
+                    };
+                    firstMessage = rogueFirst[rng.Next(rogueFirst.Length)];
+                    break;
+                case "Paladin":
+                    string[] paladinFirst = {
+                        $"✨ @{user} the Paladin raises their holy shield and charges the {monsterName}! There is still time to join the battle! Type !fight to join!",
+                        $"✨ @{user} the Paladin calls upon divine power and challenges the {monsterName}! Others can still join the battle! Type !fight to join!",
+                        $"✨ @{user} the Paladin stands firm in holy light and faces the {monsterName}! Join them in battle! Type !fight to join!"
+                    };
+                    firstMessage = paladinFirst[rng.Next(paladinFirst.Length)];
+                    break;
+                case "Berserker":
+                    string[] berserkerFirst = {
+                        $"😤 @{user} the Berserker lets out a fearsome roar and launches at the {monsterName}! There is still time to join the battle! Type !fight to join!",
+                        $"😤 @{user} the Berserker charges the {monsterName} with reckless fury! Others can still join the battle! Type !fight to join!",
+                        $"😤 @{user} the Berserker hurls themselves at the {monsterName} without a shred of fear! Join them in battle! Type !fight to join!"
+                    };
+                    firstMessage = berserkerFirst[rng.Next(berserkerFirst.Length)];
+                    break;
+            }
+
+            CPH.SetGlobalVar("MonsterJoinWindowOpen", true, true);
+            CPH.SendMessage(firstMessage);
+            CPH.EnableTimer("Monster Resolve Timer");
+        }
+        else
+        {
+            string joinMessage = "";
+            switch (role)
+            {
+                case "Warrior":
+                    string[] warriorJoin = {
+                        $"⚔️ @{user} the Warrior rushes to the front lines, sword raised high! Others can still join the battle! Type !fight to join!",
+                        $"⚔️ @{user} the Warrior crashes into the {monsterName} with a mighty shield bash! There is still time to join! Type !fight to join!",
+                        $"⚔️ @{user} the Warrior joins the fray, trading blows with the {monsterName}! Rally to the battle! Type !fight to join!"
+                    };
+                    joinMessage = warriorJoin[rng.Next(warriorJoin.Length)];
+                    break;
+                case "Archer":
+                    string[] archerJoin = {
+                        $"🏹 @{user} the Archer takes position and unleashes a volley of arrows at the {monsterName}! Others can still join the battle! Type !fight to join!",
+                        $"🏹 @{user} the Archer slides into cover and fires a precise shot at the {monsterName}! There is still time to join! Type !fight to join!",
+                        $"🏹 @{user} the Archer joins the battle, raining arrows down on the {monsterName}! Rally to the fight! Type !fight to join!"
+                    };
+                    joinMessage = archerJoin[rng.Next(archerJoin.Length)];
+                    break;
+                case "Mage":
+                    string[] mageJoin = {
+                        $"🧙 @{user} the Mage hurls a devastating fireball at the {monsterName}! Others can still join the battle! Type !fight to join!",
+                        $"🧙 @{user} the Mage joins the fight, weaving spells around the {monsterName}! There is still time to join! Type !fight to join!",
+                        $"🧙 @{user} the Mage conjures a storm of arcane bolts at the {monsterName}! Rally to the battle! Type !fight to join!"
+                    };
+                    joinMessage = mageJoin[rng.Next(mageJoin.Length)];
+                    break;
+                case "Rogue":
+                    string[] rogueJoin = {
+                        $"🗡️ @{user} the Rogue materializes from the shadows and drives a dagger into the {monsterName}! Others can still join the battle! Type !fight to join!",
+                        $"🗡️ @{user} the Rogue slips into the battle undetected and strikes a vital point! There is still time to join! Type !fight to join!",
+                        $"🗡️ @{user} the Rogue tumbles into the fray, blades flashing! Rally to the battle! Type !fight to join!"
+                    };
+                    joinMessage = rogueJoin[rng.Next(rogueJoin.Length)];
+                    break;
+                case "Paladin":
+                    string[] paladinJoin = {
+                        $"✨ @{user} the Paladin strides into battle, weapon glowing with holy energy! Others can still join the battle! Type !fight to join!",
+                        $"✨ @{user} the Paladin joins the fight, blessing nearby allies with divine light! There is still time to join! Type !fight to join!",
+                        $"✨ @{user} the Paladin smites the {monsterName} with a radiant strike! Rally to the battle! Type !fight to join!"
+                    };
+                    joinMessage = paladinJoin[rng.Next(paladinJoin.Length)];
+                    break;
+                case "Berserker":
+                    string[] berserkerJoin = {
+                        $"😤 @{user} the Berserker barrels into the battle, swinging wildly at the {monsterName}! Others can still join the battle! Type !fight to join!",
+                        $"😤 @{user} the Berserker joins the fight in a blind rage, dealing massive blows! There is still time to join! Type !fight to join!",
+                        $"😤 @{user} the Berserker leaps onto the {monsterName}, attacking with pure fury! Rally to the battle! Type !fight to join!"
+                    };
+                    joinMessage = berserkerJoin[rng.Next(berserkerJoin.Length)];
+                    break;
+            }
+
+            CPH.SendMessage(joinMessage);
+        }
+
+        return true;
+    }
+}
