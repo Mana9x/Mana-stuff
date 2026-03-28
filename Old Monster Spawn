@@ -1,0 +1,36 @@
+using System;
+public class CPHInline
+{
+    public bool Execute()
+    {
+        bool monsterActive = CPH.GetGlobalVar<bool>("MonsterActive", true);
+        if (monsterActive) return true;
+
+        int megaChance = CPH.GetGlobalVar<int>("MegaLootChance", true);
+        int roll = new Random().Next(1, 101);
+        bool isMega = roll <= megaChance;
+
+        string[] normalMonsters = { "Goblin", "Skeleton", "Slime", "Bandit", "Wolf", "Kobold", "Orc", "Giant Rat", "Spider", "Bat", "Zombie" };
+        string[] megaMonsters = { "Fire Dragon", "Lich King", "Demon Lord", "Ancient Hydra", "Shadow Colossus", "Behemoth", "Titan Golem", "Leviathan" };
+
+        Random rng = new Random();
+        string monsterName = isMega
+            ? megaMonsters[rng.Next(megaMonsters.Length)]
+            : normalMonsters[rng.Next(normalMonsters.Length)];
+
+        CPH.SetGlobalVar("ActiveMonsterName", monsterName, true);
+        CPH.SetGlobalVar("ActiveMonsterType", isMega ? "Mega" : "Normal", true);
+        CPH.SetGlobalVar("MonsterActive", true, true);
+        CPH.SetGlobalVar("MonsterJoinWindowOpen", false, true);
+        CPH.SetGlobalVar("MonsterFighters", "", true);
+
+        if (isMega)
+            CPH.SendMessage($"🔥 A WORLD BOSS HAS APPEARED! 🔥 The mighty {monsterName} descends upon the battlefield! Type !fight to challenge it!");
+        else
+            CPH.SendMessage($"⚔️ A Wild {monsterName} appears! Type !fight to challenge it!");
+
+        CPH.EnableTimer("Monster Reminder Timer");
+
+        return true;
+    }
+}
