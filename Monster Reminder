@@ -1,0 +1,46 @@
+using System;
+
+public class CPHInline
+{
+    public bool Execute()
+    {
+        bool monsterActive = CPH.GetGlobalVar<bool>("MonsterActive", true);
+        if (!monsterActive)
+        {
+            CPH.DisableTimer("Monster Reminder Timer");
+            return false;
+        }
+
+        string monsterName = CPH.GetGlobalVar<string>("ActiveMonsterName", true);
+        string monsterType = CPH.GetGlobalVar<string>("ActiveMonsterType", true);
+        bool windowOpen = CPH.GetGlobalVar<bool>("MonsterJoinWindowOpen", true);
+
+        // Don't remind if a fight is already in progress
+        if (windowOpen) return false;
+
+        Random rng = new Random();
+
+        if (monsterType == "Mega")
+        {
+            string[] megaReminders = {
+                $"🔥 A WORLD BOSS is still active! The mighty {monsterName} awaits its challengers! Type !fight!",
+                $"💀 The {monsterName} grows stronger by the second! Someone challenge it! Type !fight!",
+                $"⚡ Chat, a WORLD BOSS is still here! The {monsterName} won't wait forever! Type !fight!"
+            };
+            CPH.SendMessage(megaReminders[rng.Next(megaReminders.Length)]);
+        }
+        else
+        {
+            string[] reminders = {
+                $"⚔️ A {monsterName} is still lurking in chat! Type !fight to engage it!",
+                $"👀 The {monsterName} is still out there waiting for a challenger! Type !fight!",
+                $"😤 The {monsterName} grows impatient... Is nobody brave enough to fight it? Type !fight!",
+                $"⚠️ Don't forget! A {monsterName} is roaming the battlefield! Type !fight to take it on!",
+                $"🗡️ The {monsterName} snarls at chat, waiting for someone to challenge it! Type !fight!"
+            };
+            CPH.SendMessage(reminders[rng.Next(reminders.Length)]);
+        }
+
+        return true;
+    }
+}
