@@ -1,0 +1,377 @@
+using System;
+using System.Collections.Generic;
+
+public class CPHInline
+{
+    public bool Execute()
+    {
+        CPH.DisableTimer("Monster Resolve Timer");
+        CPH.DisableTimer("Monster Reminder Timer");
+
+        bool monsterActive = CPH.GetGlobalVar<bool>("MonsterActive", true);
+        if (!monsterActive) return false;
+
+        string monsterName = CPH.GetGlobalVar<string>("ActiveMonsterName", true);
+        string monsterType = CPH.GetGlobalVar<string>("ActiveMonsterType", true);
+        string fighterList = CPH.GetGlobalVar<string>("MonsterFighters", true) ?? "";
+
+        List<string> fighters = new List<string>(
+            fighterList.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+        );
+
+        if (fighters.Count == 0)
+        {
+            CPH.SetGlobalVar("MonsterActive", false, true);
+            CPH.SetGlobalVar("MonsterJoinWindowOpen", false, true);
+            return false;
+        }
+
+        List<string> fighterNames = new List<string>();
+        Dictionary<string, string> fighterRoles = new Dictionary<string, string>();
+        foreach (string entry in fighters)
+        {
+            string[] parts = entry.Split(':');
+            string name = parts[0];
+            string role = parts.Length > 1 ? parts[1] : "Warrior";
+            fighterNames.Add(name);
+            fighterRoles[name] = role;
+        }
+
+        int firstRewardMin, firstRewardMax, assistRewardMin, assistRewardMax;
+
+        if (monsterType == "Mega")
+        {
+            int megaLoot = CPH.GetGlobalVar<int>("MegaLootAmount", true);
+            firstRewardMin = firstRewardMax = megaLoot;
+            assistRewardMin = (int)(megaLoot * 0.25);
+            assistRewardMax = (int)(megaLoot * 0.35);
+        }
+        else
+        {
+            firstRewardMin = CPH.GetGlobalVar<int>("LootBoxMin", true);
+            firstRewardMax = CPH.GetGlobalVar<int>("LootBoxMax", true);
+            assistRewardMin = CPH.GetGlobalVar<int>("AssistRewardMin", true);
+            assistRewardMax = CPH.GetGlobalVar<int>("AssistRewardMax", true);
+        }
+
+        Random rng = new Random();
+        string firstFighter = fighterNames[0];
+        string firstRole = fighterRoles[firstFighter];
+
+        int firstReward = (firstRewardMin == firstRewardMax)
+            ? firstRewardMin
+            : rng.Next(firstRewardMin, firstRewardMax + 1);
+
+        int firstPoints = CPH.GetTwitchUserVar<int>(firstFighter, "points", true);
+        CPH.SetTwitchUserVar(firstFighter, "points", firstPoints + firstReward, true);
+
+        Dictionary<string, int> assistRewards = new Dictionary<string, int>();
+        foreach (string fighter in fighterNames)
+        {
+            if (fighter == firstFighter) continue;
+            int assistReward = rng.Next(assistRewardMin, assistRewardMax + 1);
+            int assistPoints = CPH.GetTwitchUserVar<int>(fighter, "points", true);
+            CPH.SetTwitchUserVar(fighter, "points", assistPoints + assistReward, true);
+            assistRewards[fighter] = assistReward;
+        }
+
+        List<string> storyLines = new List<string>();
+        foreach (string fighter in fighterNames)
+        {
+            if (fighter == firstFighter) continue;
+            storyLines.Add(GetContributionLine(fighter, fighterRoles[fighter], monsterName, rng));
+        }
+        storyLines.Add(GetKillingBlowLine(firstFighter, firstRole, monsterName, rng));
+        string story = string.Join(" ", storyLines);
+
+        string payoutMessage = "";
+        if (fighterNames.Count == 1)
+        {
+            payoutMessage = $"💰 @{firstFighter} claims {firstReward} Gems as their reward for the solo kill!";
+        }
+        else
+        {
+            payoutMessage = $"💰 @{firstFighter} claims {firstReward} Gems for landing the killing blow!";
+            List<string> assistLines = new List<string>();
+            foreach (string fighter in fighterNames)
+            {
+                if (fighter == firstFighter) continue;
+                assistLines.Add($"@{fighter} receives {assistRewards[fighter]} Gems for their contribution!");
+            }
+            payoutMessage += " " + string.Join(" ", assistLines);
+        }
+
+        CPH.SetGlobalVar("MonsterActive", false, true);
+        CPH.SetGlobalVar("MonsterJoinWindowOpen", false, true);
+        CPH.SetGlobalVar("MonsterFighters", "", true);
+
+        if (monsterType == "Mega")
+        {
+            CPH.SendMessage($"🔥 WORLD BOSS DEFEATED! {story} Victory!");
+            CPH.SendMessage(payoutMessage);
+        }
+        else
+        {
+            CPH.SendMessage($"{story} Victory!");
+            CPH.SendMessage(payoutMessage);
+        }
+
+        return true;
+    }
+
+    private string GetContributionLine(string user, string role, string monsterName, Random rng)
+    {
+        switch (role)
+        {
+            case "Warrior":
+                string[] warriorContrib = {
+                    $"⚔️ @{user} the Warrior battered the {monsterName} with a relentless flurry of strikes, leaving it staggered!",
+                    $"⚔️ @{user} the Warrior slammed their shield into the {monsterName}, cracking its defenses wide open!",
+                    $"⚔️ @{user} the Warrior drove their blade deep into the {monsterName}, weakening it significantly!"
+                };
+                return warriorContrib[rng.Next(warriorContrib.Length)];
+            case "Archer":
+                string[] archerContrib = {
+                    $"🏹 @{user} the Archer peppered the {monsterName} with precise arrows, slowing it to a crawl!",
+                    $"🏹 @{user} the Archer landed a perfect shot on the {monsterName}'s weak spot, staggering it!",
+                    $"🏹 @{user} the Archer rained arrows down on the {monsterName}, leaving it battered and desperate!"
+                };
+                return archerContrib[rng.Next(archerContrib.Length)];
+            case "Mage":
+                string[] mageContrib = {
+                    $"🧙 @{user} the Mage engulfed the {monsterName} in a torrent of arcane fire, scorching it badly!",
+                    $"🧙 @{user} the Mage cast a powerful binding spell, holding the {monsterName} in place!",
+                    $"🧙 @{user} the Mage blasted the {monsterName} with a chain lightning spell, leaving it convulsing!"
+                };
+                return mageContrib[rng.Next(mageContrib.Length)];
+            case "Rogue":
+                string[] rogueContrib = {
+                    $"🗡️ @{user} the Rogue struck a vital point from the shadows, poisoning the {monsterName}!",
+                    $"🗡️ @{user} the Rogue danced around the {monsterName}, leaving a dozen deep cuts across its hide!",
+                    $"🗡️ @{user} the Rogue drove twin daggers into the {monsterName}'s back, drawing a pained roar!"
+                };
+                return rogueContrib[rng.Next(rogueContrib.Length)];
+            case "Paladin":
+                string[] paladinContrib = {
+                    $"✨ @{user} the Paladin smote the {monsterName} with holy light, searing its dark flesh!",
+                    $"✨ @{user} the Paladin called down a divine judgment on the {monsterName}, staggering it!",
+                    $"✨ @{user} the Paladin blessed the battlefield, weakening the {monsterName}'s resolve!"
+                };
+                return paladinContrib[rng.Next(paladinContrib.Length)];
+            case "Berserker":
+                string[] berserkerContrib = {
+                    $"😤 @{user} the Berserker unleashed a savage flurry on the {monsterName}, sending it reeling!",
+                    $"😤 @{user} the Berserker grabbed the {monsterName} and hurled it to the ground with brute force!",
+                    $"😤 @{user} the Berserker headbutted the {monsterName} and kept swinging, ignoring every hit!"
+                };
+                return berserkerContrib[rng.Next(berserkerContrib.Length)];
+            case "Knight":
+                string[] knightContrib = {
+                    $"🛡️ @{user} the Knight absorbed the {monsterName}'s most devastating attacks, holding the line for the team!",
+                    $"🛡️ @{user} the Knight bashed the {monsterName} with their shield repeatedly, leaving it dazed!",
+                    $"🛡️ @{user} the Knight stood firm as an immovable wall, protecting allies while striking back at the {monsterName}!"
+                };
+                return knightContrib[rng.Next(knightContrib.Length)];
+            case "Ranger":
+                string[] rangerContrib = {
+                    $"🌲 @{user} the Ranger set a cunning trap that snared the {monsterName} in place!",
+                    $"🌲 @{user} the Ranger flanked the {monsterName} and struck from an unexpected angle!",
+                    $"🌲 @{user} the Ranger called upon their animal companion to harass the {monsterName} relentlessly!"
+                };
+                return rangerContrib[rng.Next(rangerContrib.Length)];
+            case "Shaman":
+                string[] shamanContrib = {
+                    $"🌊 @{user} the Shaman called down a lightning strike that left the {monsterName} crackling with electricity!",
+                    $"🌊 @{user} the Shaman summoned earth spirits that pummeled the {monsterName} from all sides!",
+                    $"🌊 @{user} the Shaman cursed the {monsterName} with an elemental hex, sapping its strength!"
+                };
+                return shamanContrib[rng.Next(shamanContrib.Length)];
+            case "Necromancer":
+                string[] necroContrib = {
+                    $"💀 @{user} the Necromancer sent waves of undead minions crashing into the {monsterName}!",
+                    $"💀 @{user} the Necromancer drained the life force from the {monsterName}, visibly weakening it!",
+                    $"💀 @{user} the Necromancer cursed the {monsterName} with dark magic, rotting its defenses away!"
+                };
+                return necroContrib[rng.Next(necroContrib.Length)];
+            case "Druid":
+                string[] druidContrib = {
+                    $"🐻 @{user} the Druid summoned a pack of wolves to harry the {monsterName} from all sides!",
+                    $"🐻 @{user} the Druid erupted vines from the ground to entangle the {monsterName}!",
+                    $"🐻 @{user} the Druid shapeshifted and tore into the {monsterName} with wild abandon!"
+                };
+                return druidContrib[rng.Next(druidContrib.Length)];
+            case "Bard":
+                string[] bardContrib = {
+                    $"🎵 @{user} the Bard played a disorienting melody that left the {monsterName} stumbling in confusion!",
+                    $"🎵 @{user} the Bard's battle hymn inspired the team and somehow made the {monsterName} question its life choices!",
+                    $"🎵 @{user} the Bard hurled their instrument at the {monsterName} with surprising force, actually doing real damage!"
+                };
+                return bardContrib[rng.Next(bardContrib.Length)];
+            case "Monk":
+                string[] monkContrib = {
+                    $"👊 @{user} the Monk unleashed a lightning fast combo that left the {monsterName} reeling!",
+                    $"👊 @{user} the Monk deflected the {monsterName}'s attacks and turned its own momentum against it!",
+                    $"👊 @{user} the Monk struck pressure points on the {monsterName}, partially paralyzing it!"
+                };
+                return monkContrib[rng.Next(monkContrib.Length)];
+            case "Assassin":
+                string[] assassinContrib = {
+                    $"🔪 @{user} the Assassin exploited a gap in the {monsterName}'s defenses and struck a critical point!",
+                    $"🔪 @{user} the Assassin applied a deadly poison to the {monsterName} that slowly sapped its strength!",
+                    $"🔪 @{user} the Assassin vanished and reappeared behind the {monsterName}, landing a devastating backstab!"
+                };
+                return assassinContrib[rng.Next(assassinContrib.Length)];
+            case "Cleric":
+                string[] clericContrib = {
+                    $"🙏 @{user} the Cleric channeled divine energy into the battlefield, healing allies and searing the {monsterName}!",
+                    $"🙏 @{user} the Cleric invoked a sacred smite that sent the {monsterName} stumbling backwards!",
+                    $"🙏 @{user} the Cleric called upon their deity to weaken the {monsterName}'s defenses with holy fire!"
+                };
+                return clericContrib[rng.Next(clericContrib.Length)];
+            case "Sorcerer":
+                string[] sorcererContrib = {
+                    $"🔮 @{user} the Sorcerer unleashed a wild magic surge that engulfed the {monsterName} in chaotic energy!",
+                    $"🔮 @{user} the Sorcerer's raw innate power crackled across the battlefield, scorching the {monsterName}!",
+                    $"🔮 @{user} the Sorcerer barely contained a massive spell that blasted the {monsterName} off its feet!"
+                };
+                return sorcererContrib[rng.Next(sorcererContrib.Length)];
+            case "Summoner":
+                string[] summonerContrib = {
+                    $"🌀 @{user} the Summoner called forth a fearsome beast that tore into the {monsterName} relentlessly!",
+                    $"🌀 @{user} the Summoner opened a rift and unleashed a wave of summoned creatures upon the {monsterName}!",
+                    $"🌀 @{user} the Summoner bound a powerful entity to assault the {monsterName} from all angles!"
+                };
+                return summonerContrib[rng.Next(summonerContrib.Length)];
+            default:
+                return $"⚔️ @{user} attacked the {monsterName} fiercely!";
+        }
+    }
+
+    private string GetKillingBlowLine(string user, string role, string monsterName, Random rng)
+    {
+        switch (role)
+        {
+            case "Warrior":
+                string[] warriorKill = {
+                    $"⚔️ @{user} the Warrior seized the moment and drove their sword clean through the {monsterName}, finishing it for good!",
+                    $"⚔️ @{user} the Warrior delivered a devastating overhead slash that split the {monsterName} in two!",
+                    $"⚔️ @{user} the Warrior kicked the {monsterName} to the ground and plunged their blade home!"
+                };
+                return warriorKill[rng.Next(warriorKill.Length)];
+            case "Archer":
+                string[] archerKill = {
+                    $"🏹 @{user} the Archer drew back one final arrow and drove it straight through the {monsterName}'s heart!",
+                    $"🏹 @{user} the Archer landed a perfect headshot on the {monsterName}, dropping it instantly!",
+                    $"🏹 @{user} the Archer fired a killing shot from across the battlefield, ending the {monsterName} for good!"
+                };
+                return archerKill[rng.Next(archerKill.Length)];
+            case "Mage":
+                string[] mageKill = {
+                    $"🧙 @{user} the Mage unleashed a catastrophic explosion that obliterated the {monsterName} entirely!",
+                    $"🧙 @{user} the Mage channeled every last drop of mana into one devastating spell, vaporizing the {monsterName}!",
+                    $"🧙 @{user} the Mage opened a rift beneath the {monsterName} and swallowed it in pure arcane energy!"
+                };
+                return mageKill[rng.Next(mageKill.Length)];
+            case "Rogue":
+                string[] rogueKill = {
+                    $"🗡️ @{user} the Rogue slipped behind the {monsterName} one final time and ended it with a single precise strike!",
+                    $"🗡️ @{user} the Rogue leapt onto the {monsterName}'s back and finished it with a killing blow to the neck!",
+                    $"🗡️ @{user} the Rogue flung a poisoned blade with deadly accuracy, dropping the {monsterName} where it stood!"
+                };
+                return rogueKill[rng.Next(rogueKill.Length)];
+            case "Paladin":
+                string[] paladinKill = {
+                    $"✨ @{user} the Paladin called down a pillar of holy light that incinerated the {monsterName} completely!",
+                    $"✨ @{user} the Paladin raised their hammer high and brought it down on the {monsterName} with divine fury!",
+                    $"✨ @{user} the Paladin invoked a sacred vow and struck the {monsterName} down with righteous power!"
+                };
+                return paladinKill[rng.Next(paladinKill.Length)];
+            case "Berserker":
+                string[] berserkerKill = {
+                    $"😤 @{user} the Berserker let out a thunderous war cry and crushed the {monsterName} with one final earth-shattering blow!",
+                    $"😤 @{user} the Berserker grabbed the {monsterName} by the throat and slammed it into the ground one last time!",
+                    $"😤 @{user} the Berserker snapped their weapon in half on the {monsterName}'s skull, dropping it cold!"
+                };
+                return berserkerKill[rng.Next(berserkerKill.Length)];
+            case "Knight":
+                string[] knightKill = {
+                    $"🛡️ @{user} the Knight delivered a final disciplined thrust that pierced the {monsterName}'s armor and ended the fight!",
+                    $"🛡️ @{user} the Knight charged one last time, lance aimed true, and drove the {monsterName} into the ground!",
+                    $"🛡️ @{user} the Knight raised their sword high and brought it down in a decisive blow that felled the {monsterName}!"
+                };
+                return knightKill[rng.Next(knightKill.Length)];
+            case "Ranger":
+                string[] rangerKill = {
+                    $"🌲 @{user} the Ranger fired a specially crafted arrow that found the {monsterName}'s only vulnerable spot!",
+                    $"🌲 @{user} the Ranger lured the {monsterName} into a final trap and finished it off with a close range shot!",
+                    $"🌲 @{user} the Ranger called upon their hunting instincts and landed the perfect killing strike on the {monsterName}!"
+                };
+                return rangerKill[rng.Next(rangerKill.Length)];
+            case "Shaman":
+                string[] shamanKill = {
+                    $"🌊 @{user} the Shaman channeled all elemental forces at once into a catastrophic strike that annihilated the {monsterName}!",
+                    $"🌊 @{user} the Shaman called down a massive storm that swallowed the {monsterName} whole!",
+                    $"🌊 @{user} the Shaman unleashed the full wrath of nature, leaving nothing of the {monsterName} behind!"
+                };
+                return shamanKill[rng.Next(shamanKill.Length)];
+            case "Necromancer":
+                string[] necroKill = {
+                    $"💀 @{user} the Necromancer ripped the very soul from the {monsterName}, leaving its body to crumble to dust!",
+                    $"💀 @{user} the Necromancer unleashed a death curse so powerful the {monsterName} collapsed on the spot!",
+                    $"💀 @{user} the Necromancer turned the {monsterName}'s own dark energy against it in one final devastating blast!"
+                };
+                return necroKill[rng.Next(necroKill.Length)];
+            case "Druid":
+                string[] druidKill = {
+                    $"🐻 @{user} the Druid transformed into their most powerful beast form and tore the {monsterName} apart!",
+                    $"🐻 @{user} the Druid called upon the ancient spirits of nature to deliver the final blow to the {monsterName}!",
+                    $"🐻 @{user} the Druid unleashed the full fury of the wild, overwhelming the {monsterName} completely!"
+                };
+                return druidKill[rng.Next(druidKill.Length)];
+            case "Bard":
+                string[] bardKill = {
+                    $"🎵 @{user} the Bard performed a finale so devastatingly catchy that the {monsterName} simply gave up and collapsed!",
+                    $"🎵 @{user} the Bard somehow talked the {monsterName} into surrendering, then finished it off for good measure!",
+                    $"🎵 @{user} the Bard struck the killing blow with their lute in what historians will call the most absurd victory ever recorded!"
+                };
+                return bardKill[rng.Next(bardKill.Length)];
+            case "Monk":
+                string[] monkKill = {
+                    $"👊 @{user} the Monk focused their inner energy into one perfect strike that shattered the {monsterName} completely!",
+                    $"👊 @{user} the Monk delivered a legendary seventeen hit combo that left the {monsterName} with no way to survive!",
+                    $"👊 @{user} the Monk unleashed a chi-powered finishing blow that sent the {monsterName} flying into oblivion!"
+                };
+                return monkKill[rng.Next(monkKill.Length)];
+            case "Assassin":
+                string[] assassinKill = {
+                    $"🔪 @{user} the Assassin found the one perfect moment and drove their blade through the {monsterName}'s heart with surgical precision!",
+                    $"🔪 @{user} the Assassin delivered the killing blow so quickly nobody even saw it happen — the {monsterName} just fell!",
+                    $"🔪 @{user} the Assassin executed a flawless finishing move that dropped the {monsterName} before it even knew what hit it!"
+                };
+                return assassinKill[rng.Next(assassinKill.Length)];
+            case "Cleric":
+                string[] clericKill = {
+                    $"🙏 @{user} the Cleric called down a divine judgement so powerful it reduced the {monsterName} to ash on the spot!",
+                    $"🙏 @{user} the Cleric invoked a sacred word of power that obliterated the {monsterName} in a blaze of holy light!",
+                    $"🙏 @{user} the Cleric raised their holy symbol and smote the {monsterName} with the full wrath of their deity!"
+                };
+                return clericKill[rng.Next(clericKill.Length)];
+            case "Sorcerer":
+                string[] sorcererKill = {
+                    $"🔮 @{user} the Sorcerer let their power run completely unchecked, obliterating the {monsterName} in a catastrophic magical explosion!",
+                    $"🔮 @{user} the Sorcerer tapped into their deepest reserves of raw power and vaporized the {monsterName} in an instant!",
+                    $"🔮 @{user} the Sorcerer unleashed a chaotic torrent of wild magic that tore the {monsterName} apart at the seams!"
+                };
+                return sorcererKill[rng.Next(sorcererKill.Length)];
+            case "Summoner":
+                string[] summonerKill = {
+                    $"🌀 @{user} the Summoner called forth their most powerful entity yet, which annihilated the {monsterName} in seconds!",
+                    $"🌀 @{user} the Summoner opened a massive rift that swallowed the {monsterName} into another dimension entirely!",
+                    $"🌀 @{user} the Summoner bound the {monsterName}'s own power against it, causing it to implode in a spectacular finish!"
+                };
+                return summonerKill[rng.Next(summonerKill.Length)];
+            default:
+                return $"⚔️ @{user} delivered the killing blow to the {monsterName}!";
+        }
+    }
+}
