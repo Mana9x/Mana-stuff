@@ -1,0 +1,325 @@
+using System;
+using System.Collections.Generic;
+
+public class CPHInline
+{
+    public bool Execute()
+    {
+        string user = args["user"].ToString();
+        string userId = args["userId"].ToString();
+        string commandId = args["commandId"].ToString();
+
+        bool monsterActive = CPH.GetGlobalVar<bool>("MonsterActive", true);
+        if (!monsterActive)
+        {
+            CPH.SendMessage($"@{user}, there is no monster to fight right now!");
+            CPH.CommandRemoveUserCooldown(commandId, userId, Platform.Twitch);
+            return false;
+        }
+
+        string fighterList = CPH.GetGlobalVar<string>("MonsterFighters", true) ?? "";
+        List<string> fighters = new List<string>(
+            fighterList.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+        );
+
+        foreach (string entry in fighters)
+        {
+            string existingUser = entry.Split(':')[0];
+            if (existingUser == user)
+            {
+                CPH.CommandRemoveUserCooldown(commandId, userId, Platform.Twitch);
+                return false;
+            }
+        }
+
+        string[] allRoles = { "Warrior", "Archer", "Mage", "Rogue", "Paladin", "Berserker", "Knight", "Ranger", "Shaman", "Necromancer", "Druid", "Bard", "Monk", "Assassin", "Cleric", "Sorcerer", "Summoner" };
+        Random rng = new Random();
+        string savedClass = CPH.GetTwitchUserVar<string>(user, "playerClass", true) ?? "";
+        string role = allRoles[rng.Next(allRoles.Length)];
+        foreach (string c in allRoles)
+        {
+            if (c.ToLower() == savedClass.ToLower())
+            {
+                role = c;
+                break;
+            }
+        }
+
+        fighters.Add($"{user}:{role}");
+        CPH.SetGlobalVar("MonsterFighters", string.Join(",", fighters), true);
+
+        string monsterName = CPH.GetGlobalVar<string>("ActiveMonsterName", true);
+        bool windowOpen = CPH.GetGlobalVar<bool>("MonsterJoinWindowOpen", true);
+
+        if (!windowOpen)
+        {
+            string firstMessage = GetFirstMessage(user, role, monsterName, rng);
+            CPH.SetGlobalVar("MonsterJoinWindowOpen", true, true);
+            CPH.SendMessage(firstMessage);
+            CPH.EnableTimer("Monster Resolve Timer");
+        }
+        else
+        {
+            string joinMessage = GetJoinMessage(user, role, monsterName, rng);
+            CPH.SendMessage(joinMessage);
+        }
+
+        return true;
+    }
+
+    private string GetFirstMessage(string user, string role, string monsterName, Random rng)
+    {
+        switch (role)
+        {
+            case "Warrior":
+                string[] warriorFirst = {
+                    $"⚔️ @{user} the Warrior charges headfirst at the {monsterName} with a battle cry! Others still have time to join the battle! Type !fight to join!",
+                    $"⚔️ @{user} the Warrior plants their feet and challenges the {monsterName} to combat! There is still time to join the battle! Type !fight to join!",
+                    $"⚔️ @{user} the Warrior unsheathes their blade and stands between chat and the {monsterName}! Join them in battle! Type !fight to join!"
+                };
+                return warriorFirst[rng.Next(warriorFirst.Length)];
+            case "Archer":
+                string[] archerFirst = {
+                    $"🏹 @{user} the Archer fires the opening shot at the {monsterName}! There is still time to join the battle! Type !fight to join!",
+                    $"🏹 @{user} the Archer notches an arrow and takes aim at the {monsterName}! Others can still join the battle! Type !fight to join!",
+                    $"🏹 @{user} the Archer strikes the {monsterName} from a distance! Rally to their side and join the battle! Type !fight to join!"
+                };
+                return archerFirst[rng.Next(archerFirst.Length)];
+            case "Mage":
+                string[] mageFirst = {
+                    $"🧙 @{user} the Mage begins channeling devastating magic at the {monsterName}! There is still time to join the battle! Type !fight to join!",
+                    $"🧙 @{user} the Mage hurls a crackling spell at the {monsterName}! Others can still join the battle! Type !fight to join!",
+                    $"🧙 @{user} the Mage steps forward and unleashes arcane fury on the {monsterName}! Join them in battle! Type !fight to join!"
+                };
+                return mageFirst[rng.Next(mageFirst.Length)];
+            case "Rogue":
+                string[] rogueFirst = {
+                    $"🗡️ @{user} the Rogue leaps from the shadows and ambushes the {monsterName}! There is still time to join the battle! Type !fight to join!",
+                    $"🗡️ @{user} the Rogue strikes first with a vicious sneak attack on the {monsterName}! Others can still join the battle! Type !fight to join!",
+                    $"🗡️ @{user} the Rogue vanishes and reappears behind the {monsterName} with daggers drawn! Join them in battle! Type !fight to join!"
+                };
+                return rogueFirst[rng.Next(rogueFirst.Length)];
+            case "Paladin":
+                string[] paladinFirst = {
+                    $"✨ @{user} the Paladin raises their holy shield and charges the {monsterName}! There is still time to join the battle! Type !fight to join!",
+                    $"✨ @{user} the Paladin calls upon divine power and challenges the {monsterName}! Others can still join the battle! Type !fight to join!",
+                    $"✨ @{user} the Paladin stands firm in holy light and faces the {monsterName}! Join them in battle! Type !fight to join!"
+                };
+                return paladinFirst[rng.Next(paladinFirst.Length)];
+            case "Berserker":
+                string[] berserkerFirst = {
+                    $"😤 @{user} the Berserker lets out a fearsome roar and launches at the {monsterName}! There is still time to join the battle! Type !fight to join!",
+                    $"😤 @{user} the Berserker charges the {monsterName} with reckless fury! Others can still join the battle! Type !fight to join!",
+                    $"😤 @{user} the Berserker hurls themselves at the {monsterName} without a shred of fear! Join them in battle! Type !fight to join!"
+                };
+                return berserkerFirst[rng.Next(berserkerFirst.Length)];
+            case "Knight":
+                string[] knightFirst = {
+                    $"🛡️ @{user} the Knight lowers their visor and charges the {monsterName} on horseback! Others still have time to join the battle! Type !fight to join!",
+                    $"🛡️ @{user} the Knight stands resolute before the {monsterName}, shield raised high! There is still time to join the battle! Type !fight to join!",
+                    $"🛡️ @{user} the Knight steps forward to protect chat from the {monsterName}! Join them in battle! Type !fight to join!"
+                };
+                return knightFirst[rng.Next(knightFirst.Length)];
+            case "Ranger":
+                string[] rangerFirst = {
+                    $"🌲 @{user} the Ranger emerges from the treeline and engages the {monsterName}! Others still have time to join the battle! Type !fight to join!",
+                    $"🌲 @{user} the Ranger sets a trap and lures the {monsterName} into it! There is still time to join the battle! Type !fight to join!",
+                    $"🌲 @{user} the Ranger tracks the {monsterName} and strikes from the wilderness! Join them in battle! Type !fight to join!"
+                };
+                return rangerFirst[rng.Next(rangerFirst.Length)];
+            case "Shaman":
+                string[] shamanFirst = {
+                    $"🌊 @{user} the Shaman calls upon the elemental spirits to battle the {monsterName}! Others still have time to join! Type !fight to join!",
+                    $"🌊 @{user} the Shaman channels the fury of nature itself against the {monsterName}! There is still time to join the battle! Type !fight to join!",
+                    $"🌊 @{user} the Shaman summons a storm of elemental energy around the {monsterName}! Join them in battle! Type !fight to join!"
+                };
+                return shamanFirst[rng.Next(shamanFirst.Length)];
+            case "Necromancer":
+                string[] necroFirst = {
+                    $"💀 @{user} the Necromancer raises fallen warriors to fight the {monsterName}! Others still have time to join the battle! Type !fight to join!",
+                    $"💀 @{user} the Necromancer channels dark energy and unleashes it upon the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"💀 @{user} the Necromancer steps forward, surrounded by shadowy apparitions targeting the {monsterName}! Join them! Type !fight to join!"
+                };
+                return necroFirst[rng.Next(necroFirst.Length)];
+            case "Druid":
+                string[] druidFirst = {
+                    $"🐻 @{user} the Druid shapeshifts into a mighty bear and charges the {monsterName}! Others still have time to join! Type !fight to join!",
+                    $"🐻 @{user} the Druid calls upon the wild and unleashes nature's wrath on the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🐻 @{user} the Druid transforms and pounces on the {monsterName} with savage ferocity! Join them in battle! Type !fight to join!"
+                };
+                return druidFirst[rng.Next(druidFirst.Length)];
+            case "Bard":
+                string[] bardFirst = {
+                    $"🎵 @{user} the Bard strums a battle hymn so powerful it drives the {monsterName} into a confused rage! Others still have time to join! Type !fight to join!",
+                    $"🎵 @{user} the Bard leaps onto a rock and begins an inspirational performance aimed at the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🎵 @{user} the Bard somehow convinces the {monsterName} to sit down, then immediately attacks it! Join them in battle! Type !fight to join!"
+                };
+                return bardFirst[rng.Next(bardFirst.Length)];
+            case "Monk":
+                string[] monkFirst = {
+                    $"👊 @{user} the Monk cracks their knuckles and launches a flurry of unarmed strikes at the {monsterName}! Others still have time to join! Type !fight to join!",
+                    $"👊 @{user} the Monk enters a focused meditative stance before unleashing devastating blows on the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"👊 @{user} the Monk moves with blinding speed toward the {monsterName}, fists raised! Join them in battle! Type !fight to join!"
+                };
+                return monkFirst[rng.Next(monkFirst.Length)];
+            case "Assassin":
+                string[] assassinFirst = {
+                    $"🔪 @{user} the Assassin materializes from nowhere and drives a blade into the {monsterName}'s weak point! Others still have time to join! Type !fight to join!",
+                    $"🔪 @{user} the Assassin had already been stalking the {monsterName} for hours and now strikes! There is still time to join! Type !fight to join!",
+                    $"🔪 @{user} the Assassin appears in a flash, landing a devastating opening strike on the {monsterName}! Join them in battle! Type !fight to join!"
+                };
+                return assassinFirst[rng.Next(assassinFirst.Length)];
+            case "Cleric":
+                string[] clericFirst = {
+                    $"🙏 @{user} the Cleric raises their holy symbol and calls down divine wrath upon the {monsterName}! Others still have time to join! Type !fight to join!",
+                    $"🙏 @{user} the Cleric strides forward invoking the power of their deity against the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🙏 @{user} the Cleric channels sacred energy and launches a divine assault on the {monsterName}! Join them in battle! Type !fight to join!"
+                };
+                return clericFirst[rng.Next(clericFirst.Length)];
+            case "Sorcerer":
+                string[] sorcererFirst = {
+                    $"🔮 @{user} the Sorcerer unleashes a wild surge of raw magical power at the {monsterName}! Others still have time to join! Type !fight to join!",
+                    $"🔮 @{user} the Sorcerer crackles with unstable innate magic and hurls it all at the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🔮 @{user} the Sorcerer barely contains the chaotic power within as they unleash it on the {monsterName}! Join them in battle! Type !fight to join!"
+                };
+                return sorcererFirst[rng.Next(sorcererFirst.Length)];
+            case "Summoner":
+                string[] summonerFirst = {
+                    $"🌀 @{user} the Summoner tears open a portal and calls forth a powerful creature to battle the {monsterName}! Others still have time to join! Type !fight to join!",
+                    $"🌀 @{user} the Summoner raises their staff and summons an army of creatures to overwhelm the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🌀 @{user} the Summoner binds a mighty beast to their will and sends it charging at the {monsterName}! Join them in battle! Type !fight to join!"
+                };
+                return summonerFirst[rng.Next(summonerFirst.Length)];
+            default:
+                return $"⚔️ @{user} charges at the {monsterName}! Others still have time to join the battle! Type !fight to join!";
+        }
+    }
+
+    private string GetJoinMessage(string user, string role, string monsterName, Random rng)
+    {
+        switch (role)
+        {
+            case "Warrior":
+                string[] warriorJoin = {
+                    $"⚔️ @{user} the Warrior rushes to the front lines, sword raised high! Others can still join the battle! Type !fight to join!",
+                    $"⚔️ @{user} the Warrior crashes into the {monsterName} with a mighty shield bash! There is still time to join! Type !fight to join!",
+                    $"⚔️ @{user} the Warrior joins the fray, trading blows with the {monsterName}! Rally to the battle! Type !fight to join!"
+                };
+                return warriorJoin[rng.Next(warriorJoin.Length)];
+            case "Archer":
+                string[] archerJoin = {
+                    $"🏹 @{user} the Archer takes position and unleashes a volley of arrows at the {monsterName}! Others can still join the battle! Type !fight to join!",
+                    $"🏹 @{user} the Archer slides into cover and fires a precise shot at the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🏹 @{user} the Archer joins the battle, raining arrows down on the {monsterName}! Rally to the fight! Type !fight to join!"
+                };
+                return archerJoin[rng.Next(archerJoin.Length)];
+            case "Mage":
+                string[] mageJoin = {
+                    $"🧙 @{user} the Mage hurls a devastating fireball at the {monsterName}! Others can still join the battle! Type !fight to join!",
+                    $"🧙 @{user} the Mage joins the fight, weaving spells around the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🧙 @{user} the Mage conjures a storm of arcane bolts at the {monsterName}! Rally to the battle! Type !fight to join!"
+                };
+                return mageJoin[rng.Next(mageJoin.Length)];
+            case "Rogue":
+                string[] rogueJoin = {
+                    $"🗡️ @{user} the Rogue materializes from the shadows and drives a dagger into the {monsterName}! Others can still join the battle! Type !fight to join!",
+                    $"🗡️ @{user} the Rogue slips into the battle undetected and strikes a vital point! There is still time to join! Type !fight to join!",
+                    $"🗡️ @{user} the Rogue tumbles into the fray, blades flashing! Rally to the battle! Type !fight to join!"
+                };
+                return rogueJoin[rng.Next(rogueJoin.Length)];
+            case "Paladin":
+                string[] paladinJoin = {
+                    $"✨ @{user} the Paladin strides into battle, weapon glowing with holy energy! Others can still join the battle! Type !fight to join!",
+                    $"✨ @{user} the Paladin joins the fight, blessing nearby allies with divine light! There is still time to join! Type !fight to join!",
+                    $"✨ @{user} the Paladin smites the {monsterName} with a radiant strike! Rally to the battle! Type !fight to join!"
+                };
+                return paladinJoin[rng.Next(paladinJoin.Length)];
+            case "Berserker":
+                string[] berserkerJoin = {
+                    $"😤 @{user} the Berserker barrels into the battle, swinging wildly at the {monsterName}! Others can still join the battle! Type !fight to join!",
+                    $"😤 @{user} the Berserker joins the fight in a blind rage, dealing massive blows! There is still time to join! Type !fight to join!",
+                    $"😤 @{user} the Berserker leaps onto the {monsterName}, attacking with pure fury! Rally to the battle! Type !fight to join!"
+                };
+                return berserkerJoin[rng.Next(berserkerJoin.Length)];
+            case "Knight":
+                string[] knightJoin = {
+                    $"🛡️ @{user} the Knight charges into the fray, shield absorbing the {monsterName}'s blows! Others can still join! Type !fight to join!",
+                    $"🛡️ @{user} the Knight joins the battle, forming a defensive line against the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🛡️ @{user} the Knight rushes to protect their allies, sword drawn against the {monsterName}! Rally to the battle! Type !fight to join!"
+                };
+                return knightJoin[rng.Next(knightJoin.Length)];
+            case "Ranger":
+                string[] rangerJoin = {
+                    $"🌲 @{user} the Ranger flanks the {monsterName} from the treeline and joins the assault! Others can still join! Type !fight to join!",
+                    $"🌲 @{user} the Ranger springs a trap on the {monsterName} and leaps into the fray! There is still time to join! Type !fight to join!",
+                    $"🌲 @{user} the Ranger joins the hunt, tracking the {monsterName}'s every move! Rally to the battle! Type !fight to join!"
+                };
+                return rangerJoin[rng.Next(rangerJoin.Length)];
+            case "Shaman":
+                string[] shamanJoin = {
+                    $"🌊 @{user} the Shaman calls down lightning from the sky onto the {monsterName}! Others can still join! Type !fight to join!",
+                    $"🌊 @{user} the Shaman joins the battle, summoning earth spirits to pummel the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🌊 @{user} the Shaman unleashes a torrent of elemental fury at the {monsterName}! Rally to the battle! Type !fight to join!"
+                };
+                return shamanJoin[rng.Next(shamanJoin.Length)];
+            case "Necromancer":
+                string[] necroJoin = {
+                    $"💀 @{user} the Necromancer joins the battle, sending waves of undead minions at the {monsterName}! Others can still join! Type !fight to join!",
+                    $"💀 @{user} the Necromancer corrupts the ground beneath the {monsterName} with dark magic! There is still time to join! Type !fight to join!",
+                    $"💀 @{user} the Necromancer enters the fray, draining the life force from the {monsterName}! Rally to the battle! Type !fight to join!"
+                };
+                return necroJoin[rng.Next(necroJoin.Length)];
+            case "Druid":
+                string[] druidJoin = {
+                    $"🐻 @{user} the Druid shapeshifts into a wolf and joins the hunt against the {monsterName}! Others can still join! Type !fight to join!",
+                    $"🐻 @{user} the Druid summons a swarm of creatures to harass the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🐻 @{user} the Druid erupts from the earth in beast form and joins the battle! Rally to the fight! Type !fight to join!"
+                };
+                return druidJoin[rng.Next(druidJoin.Length)];
+            case "Bard":
+                string[] bardJoin = {
+                    $"🎵 @{user} the Bard joins the battle playing an aggressively catchy tune that distracts the {monsterName}! Others can still join! Type !fight to join!",
+                    $"🎵 @{user} the Bard hurls their lute at the {monsterName} and somehow it works! There is still time to join! Type !fight to join!",
+                    $"🎵 @{user} the Bard joins the fray, inspiring allies with a rousing battle song! Rally to the battle! Type !fight to join!"
+                };
+                return bardJoin[rng.Next(bardJoin.Length)];
+            case "Monk":
+                string[] monkJoin = {
+                    $"👊 @{user} the Monk dashes into the battle and delivers a rapid combo to the {monsterName}! Others can still join! Type !fight to join!",
+                    $"👊 @{user} the Monk joins the fight, deflecting the {monsterName}'s attacks with calm precision! There is still time to join! Type !fight to join!",
+                    $"👊 @{user} the Monk leaps into the fray with a flying kick that staggers the {monsterName}! Rally to the battle! Type !fight to join!"
+                };
+                return monkJoin[rng.Next(monkJoin.Length)];
+            case "Assassin":
+                string[] assassinJoin = {
+                    $"🔪 @{user} the Assassin slips into the battle undetected and strikes the {monsterName} from behind! Others can still join! Type !fight to join!",
+                    $"🔪 @{user} the Assassin joins the fight, exploiting every opening the {monsterName} leaves! There is still time to join! Type !fight to join!",
+                    $"🔪 @{user} the Assassin appears from the shadows and lands a critical strike on the {monsterName}! Rally to the battle! Type !fight to join!"
+                };
+                return assassinJoin[rng.Next(assassinJoin.Length)];
+            case "Cleric":
+                string[] clericJoin = {
+                    $"🙏 @{user} the Cleric joins the battle, healing allies and smiting the {monsterName} with divine energy! Others can still join! Type !fight to join!",
+                    $"🙏 @{user} the Cleric strides onto the battlefield, channeling sacred power against the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🙏 @{user} the Cleric joins the fray, invoking their deity's wrath upon the {monsterName}! Rally to the battle! Type !fight to join!"
+                };
+                return clericJoin[rng.Next(clericJoin.Length)];
+            case "Sorcerer":
+                string[] sorcererJoin = {
+                    $"🔮 @{user} the Sorcerer joins the battle, unleashing wild surges of chaotic magic at the {monsterName}! Others can still join! Type !fight to join!",
+                    $"🔮 @{user} the Sorcerer crackles with raw power as they hurl unstable spells at the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🔮 @{user} the Sorcerer erupts into the fray in a blaze of uncontrolled magical energy! Rally to the battle! Type !fight to join!"
+                };
+                return sorcererJoin[rng.Next(sorcererJoin.Length)];
+            case "Summoner":
+                string[] summonerJoin = {
+                    $"🌀 @{user} the Summoner joins the battle, tearing open a portal and sending creatures after the {monsterName}! Others can still join! Type !fight to join!",
+                    $"🌀 @{user} the Summoner arrives on the battlefield and immediately calls forth a powerful ally to fight the {monsterName}! There is still time to join! Type !fight to join!",
+                    $"🌀 @{user} the Summoner joins the fray, binding a fearsome creature to assault the {monsterName}! Rally to the battle! Type !fight to join!"
+                };
+                return summonerJoin[rng.Next(summonerJoin.Length)];
+            default:
+                return $"⚔️ @{user} joins the battle against the {monsterName}! Others can still join! Type !fight to join!";
+        }
+    }
+}
