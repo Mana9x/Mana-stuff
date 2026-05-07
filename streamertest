@@ -1,0 +1,387 @@
+<!--
+Development Notes:
+- It's important that the IFRAME logic stay intact, as it is how we receieve messages
+- This code is in vanilla Javascript designed for web browsers without compiling
+- Details of the incoming message structure can be found here: https://github.com/steveseguin/social_stream/blob/main/README.md#message-structure
+ !-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rainbow Chat Overlay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+
+html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #0000;
+    overflow: hidden;
+    font-family: 'Outfit', sans-serif;
+}
+
+#chat-container {
+    padding: 0 10px 10px 10px;
+    max-width: 580px;
+    margin: auto;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+}
+
+#chat-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── Iridescent border via conic-gradient pseudo-element ── */
+.message {
+    position: relative;
+    padding: 14px 16px;
+    border-radius: 16px;
+    color: #fff;
+    word-wrap: break-word;
+    max-width: 100%;
+    flex-shrink: 0;
+
+    /* Frosted glass core */
+    background: rgba(15, 8, 35, 0.45);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+
+    /* Subtle inner highlight at top */
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 8px 32px rgba(0, 0, 0, 0.35),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+
+    /* Animate in */
+    opacity: 0;
+    animation: slideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+    /* Border via outline trick — actual border done with ::before */
+    isolation: isolate;
+}
+
+/* Iridescent animated border */
+.message::before {
+    content: '';
+    position: absolute;
+    inset: -1.5px;
+    border-radius: 17px;
+    padding: 1.5px;
+    background: conic-gradient(
+        from var(--angle, 0deg),
+        #ff6fd8,
+        #a78bfa,
+        #60a5fa,
+        #34d399,
+        #fbbf24,
+        #f472b6,
+        #ff6fd8
+    );
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: spin-border 6s linear infinite;
+    pointer-events: none;
+    z-index: -1;
+}
+
+@property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+
+@keyframes spin-border {
+    to { --angle: 360deg; }
+}
+
+@keyframes slideIn {
+    0% {
+        opacity: 0;
+        transform: translateX(18px) scale(0.97);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+/* ── Header row: avatar + name + badges ── */
+.message-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+/* ── Avatar ── */
+.avatar-wrapper {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+    padding: 2px;
+    background: conic-gradient(
+        from var(--angle, 0deg),
+        #ff6fd8, #a78bfa, #60a5fa, #34d399, #fbbf24, #f472b6, #ff6fd8
+    );
+    animation: spin-border 4s linear infinite;
+    box-shadow: 0 0 12px rgba(167, 139, 250, 0.45);
+}
+
+.avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    display: block;
+}
+
+/* ── Name ── */
+.name-bg {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 3px 10px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    backdrop-filter: blur(6px);
+}
+
+.name {
+    color: #fff;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    /* Soft iridescent shimmer on name */
+    background: linear-gradient(90deg, #e2c9ff, #bae6fd, #99f6e4, #fde68a, #fca5e2, #e2c9ff);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: name-shimmer 8s linear infinite;
+}
+
+@keyframes name-shimmer {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+}
+
+/* ── Source icon ── */
+.source-icon {
+    width: 38px;
+    height: 38px;
+    vertical-align: middle;
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.5));
+    flex-shrink: 0;
+}
+
+/* ── Badges ── */
+.badge {
+    display: inline-block;
+    height: 38px;
+    flex-shrink: 0;
+    vertical-align: middle;
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.35));
+}
+
+/* ── Membership ── */
+.membership-status {
+    font-size: 32px;
+    font-weight: 600;
+    color: #fde68a;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    text-shadow: 0 0 10px rgba(253, 230, 138, 0.6);
+}
+
+/* ── Chat text ── */
+.text {
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.93);
+    overflow-wrap: break-word;
+    /* Crisp readable text over any background */
+    text-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.9),
+        0 0 12px rgba(0, 0, 0, 0.5);
+}
+
+.text img {
+    max-width: 100px;
+    max-height: 30px;
+    vertical-align: bottom;
+    border-radius: 4px;
+}
+
+/* ── Donation ── */
+.donation {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 32px;
+    font-weight: 700;
+    color: #fde68a;
+    background: rgba(253, 230, 138, 0.12);
+    border: 1px solid rgba(253, 230, 138, 0.3);
+    padding: 4px 12px;
+    border-radius: 10px;
+    text-shadow: 0 0 12px rgba(253, 230, 138, 0.6);
+}
+
+/* ── Content image ── */
+.large-image {
+    max-width: 100%;
+    height: auto;
+    margin-top: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+}
+
+</style>
+</head>
+<body>
+<div id="chat-container"></div>
+<script>
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var roomID = "iWWnKL28tQ";
+
+    if (urlParams.has("session")){
+        roomID = urlParams.get("session");
+    }
+    var password = "false";
+    var featuredMode = false; // featured == selected messages only.  not featured == all messages.
+
+    const chatContainer = document.getElementById('chat-container');
+
+    function addMessageToOverlay(data) {
+
+        if (!(data.chatmessage || data.donation || data.hasDonation) && !data.chatname){
+            return;
+        }
+
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message');
+        if (data.mid){ messageDiv.id = data.mid; }
+        data.sourceicon = "https://socialstream.ninja/sources/images/" + data.type + ".png";
+
+        var chatbadges = "";
+        if (data.chatbadges) {
+            data.chatbadges.forEach(badge => {
+                if (typeof badge === "object") {
+                    if (badge.type === "img" && badge.src) {
+                        chatbadges += `<img class='badge' src='${badge.src}' />`;
+                    } else if (badge.type === "svg" && badge.html) {
+                        chatbadges += `<span class='badge svg'>${badge.html}</span>`;
+                    }
+                } else {
+                    chatbadges += `<img class='badge' src='${badge}' />`;
+                }
+            });
+        }
+
+        messageDiv.innerHTML = `
+            <div class="message-header">
+                ${data.chatimg ? `<div class="avatar-wrapper"><div class="avatar" style="background-image: url('${data.chatimg}');"></div></div>` : ''}
+                ${data.chatname ? `<div class="name-bg"><span class="name">${data.chatname}</span></div>` : ''}
+                ${data.sourceicon ? `<img src="${data.sourceicon}" alt="Source" class="source-icon">` : ''}
+                ${chatbadges}
+            </div>
+            ${data.membership ? `<div class="membership-status">${data.membership}</div>` : ''}
+            <div class="text" ${data.event ? 'style="font-style: italic; opacity: 0.8;"' : ''}>${data.chatmessage ? data.chatmessage : ''}</div>
+            ${data.hasDonation ? `<div class="donation">💛 ${data.hasDonation}</div>` : ''}
+            ${data.contentimg ? `<img src="${data.contentimg}" alt="Content" class="large-image" onerror="this.style.display='none';">` : ''}
+        `;
+
+        chatContainer.prepend(messageDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        while (chatContainer.children.length > 20) {
+            chatContainer.removeChild(chatContainer.lastChild);
+        }
+    }
+
+    // The IFrame allows for peer to peer mode; used by default.
+    var iframe = document.createElement("iframe");
+    if (featuredMode){
+        iframe.src = `https://vdo.socialstream.ninja/?ln&password=${password}&salt=vdo.ninja&label=overlay&exclude=${roomID}&scene&novideo&noaudio&cleanoutput&room=${roomID}`;
+    } else {
+        iframe.src = "https://vdo.socialstream.ninja/?ln&salt=vdo.ninja&password="+password+"&push&label=dock&vd=0&ad=0&novideo&noaudio&autostart&cleanoutput&room="+roomID;
+    }
+    iframe.style.cssText = "width: 0px; height: 0px; position: fixed; left: -100px; top: -100px;";
+    document.body.appendChild(iframe);
+    window.addEventListener("message", function (e) {
+        if (e.source != iframe.contentWindow) return;
+        if (e.data.dataReceived && e.data.dataReceived.overlayNinja) {
+            addMessageToOverlay(e.data.dataReceived.overlayNinja);
+        }
+    });
+
+    // WebSocket fallback
+    var conCon = 1;
+    var socketserver = false;
+    var serverURL = urlParams.has("localserver") ? "ws://127.0.0.1:3000" : "wss://io.socialstream.ninja";
+
+    function setupSocket(){
+        socketserver.onclose = function (){
+            setTimeout(function(){
+                conCon += 1;
+                socketserver = new WebSocket(serverURL);
+                setupSocket();
+            }, 100 * conCon);
+        };
+        socketserver.onopen = function (){
+            conCon = 1;
+            socketserver.send(JSON.stringify({"join": roomID, "out": 3, "in": 4}));
+        };
+        socketserver.addEventListener('message', function (event) {
+            if (event.data){
+                var data = JSON.parse(event.data);
+                addMessageToOverlay(data);
+                if (data.get){
+                    var ret = {};
+                    ret.callback = {};
+                    ret.callback.get = data.get;
+                    ret.callback.result = true;
+                    socketserver.send(JSON.stringify(ret));
+                }
+            }
+        });
+    }
+
+    if (urlParams.has("server") || urlParams.has("server2")){
+        serverURL = urlParams.get("server") || urlParams.get("server2") || serverURL;
+        socketserver = new WebSocket(serverURL);
+        setupSocket();
+    }
+
+</script>
+</body>
+</html>
