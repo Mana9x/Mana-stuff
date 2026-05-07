@@ -53,15 +53,19 @@ body {
     padding: 20px;
     margin-bottom: 20px;
     border-radius: 18px;
-    border: 2px solid rgba(255, 255, 255, 0.15);
+    border: 2px solid transparent;
+    background-clip: padding-box;
     box-shadow:
         0 4px 20px rgba(150, 90, 255, 0.25),
-        inset 0 0 25px rgba(255, 255, 255, 0.05);
+        inset 0 0 25px rgba(255, 255, 255, 0.05),
+        0 0 0 2px rgba(180, 100, 255, 0.45),
+        0 0 18px rgba(180, 100, 255, 0.2),
+        0 0 35px rgba(120, 80, 255, 0.1);
     color: #fff;
     transition: all 0.3s ease-in-out;
     opacity: 0;
     transform: translateY(-20px);
-    animation: slideFadeIn 0.5s ease forwards;
+    animation: slideFadeIn 0.5s ease forwards, border-breathe 4s ease-in-out infinite;
     position: relative;
     overflow: hidden;
     backdrop-filter: blur(16px) saturate(160%);
@@ -99,6 +103,12 @@ body {
     0%   { transform: rotate(0deg) scale(1); }
     50%  { transform: rotate(180deg) scale(1.1); }
     100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes border-breathe {
+    0%   { box-shadow: 0 4px 20px rgba(150, 90, 255, 0.25), inset 0 0 25px rgba(255,255,255,0.05), 0 0 0 2px rgba(180, 100, 255, 0.45), 0 0 18px rgba(180, 100, 255, 0.2), 0 0 35px rgba(120, 80, 255, 0.1); }
+    50%  { box-shadow: 0 4px 20px rgba(150, 90, 255, 0.35), inset 0 0 25px rgba(255,255,255,0.05), 0 0 0 2px rgba(220, 120, 255, 0.6),  0 0 24px rgba(200, 100, 255, 0.35), 0 0 50px rgba(150, 80, 255, 0.2); }
+    100% { box-shadow: 0 4px 20px rgba(150, 90, 255, 0.25), inset 0 0 25px rgba(255,255,255,0.05), 0 0 0 2px rgba(180, 100, 255, 0.45), 0 0 18px rgba(180, 100, 255, 0.2), 0 0 35px rgba(120, 80, 255, 0.1); }
 }
 
 @keyframes slideFadeIn {
