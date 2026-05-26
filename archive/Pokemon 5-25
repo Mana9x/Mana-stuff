@@ -1,0 +1,314 @@
+using System;
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
+using Streamer.bot.Plugin.Interface;
+using Streamer.bot.Plugin.Interface.Enums;
+using StreamUP;
+using System.Collections.Generic;
+using Newtonsoft.Json;
+
+public class CPHInline
+{
+    public StreamUpLib SUP;
+    public void Init()
+    {
+        SUP = new StreamUpLib(CPH, "sup028");
+    }
+
+    private readonly string CatchInProgressGlobalName = "pafCatchInProgress";
+    private readonly string OnScreenGlobalName = "pafPokemonOnScreen";
+    private readonly string CurrentPokemonGlobalName = "pafCurrentPokemonJson";
+    public bool Execute()
+    {
+        EventType source = CPH.GetEventType();
+        bool usingCommand = source == EventType.CommandTriggered;
+        var settings = SUP.GetTypedSettings<ProductSettings>();
+        string streamUPStreamerKey = settings.Poke_af_api_key;
+        SUP.LogInfo("Perform Catch Command Executed");
+        bool catchInProgress = CPH.GetGlobalVar<bool?>(CatchInProgressGlobalName) ?? false;
+        if (catchInProgress)
+        {
+            SUP.LogInfo("Catch already in progress, cancelling duplicate attempt.");
+            SUP.PokemonAndFriendsFail(2, "A catch is already in progress. Please wait for it to complete before trying again.");
+            SUP.Refund(true, "Pokemon and Friends");
+            return false;
+        }
+
+        bool pokemonOnScreen = CPH.GetGlobalVar<bool>(OnScreenGlobalName);
+        if (!pokemonOnScreen)
+        {
+            SUP.LogInfo("No Pokémon on screen, cancelling catch attempt.");
+            SUP.PokemonAndFriendsFail(3, "No Pokémon on screen.");
+            SUP.Refund(true, "Pokemon and Friends");
+            CPH.RunActionById("46e55315-2c0a-4db5-a58b-e82ca3197774", false); //Reset Action
+            return false;
+        }
+
+        //BALL LOGIC
+        var ballMode = "Random";
+        var input = SUP.TryGetArgOrDefault("rawInput", "no input");
+        Dictionary<string, bool> ballsEnabled = new Dictionary<string, bool>
+        {
+            {
+                "poke",
+                settings.Poke_af_enable_poke
+            },
+            {
+                "great",
+                settings.Poke_af_enable_great
+            },
+            {
+                "ultra",
+                settings.Poke_af_enable_ultra
+            },
+            {
+                "master",
+                settings.Poke_af_enable_master
+            },
+        };
+        Dictionary<string, int> ballsUse = new Dictionary<string, int>();
+        Dictionary<string, double> ballModifier = new Dictionary<string, double>();
+        if (ballsEnabled["poke"])
+        {
+            ballsUse.Add("poke", settings.Poke_af_pokeball_use);
+            ballModifier.Add("poke", settings.Poke_af_pokeball);
+        }
+
+        if (ballsEnabled["great"])
+        {
+            ballsUse.Add("great", settings.Poke_af_greatball_use);
+            ballModifier.Add("great", settings.Poke_af_great_ball);
+        }
+
+        if (ballsEnabled["ultra"])
+        {
+            ballsUse.Add("ultra", settings.Poke_af_ultraball_use);
+            ballModifier.Add("ultra", settings.Poke_af_ultra_ball);
+        }
+
+        if (ballsEnabled["master"])
+        {
+            ballsUse.Add("master", settings.Poke_af_masterball_use);
+            ballModifier.Add("master", settings.Poke_af_master_ball);
+        }
+
+        string ballType = SUP.TryGetArgOrDefault("forcedBall", SUP.GetWeightedRandom(ballsUse));
+        SUP.LogInfo("Setting Catch In Progress Flag to 'TRUE'");
+        CPH.SetGlobalVar(CatchInProgressGlobalName, true);
+        SUP.LogInfo("Pausing Channel Point Reward");
+        var rewardId = settings.Poke_af_channel_redeem;
+        if (!usingCommand)
+        {
+            CPH.PauseReward(rewardId);
+        }
+
+        SUP.LogInfo("Starting Catch Process");
+        JObject pokemon = JObject.Parse(SUP.GetPokemonDataFromScreen());
+        JObject catchInfo = new JObject
+        {
+            {
+                "pokemonId",
+                pokemon["id"]
+            },
+            {
+                "viewerId",
+                int.Parse(args["userId"].ToString())
+            },
+            {
+                "preferedUserName",
+                args["user"].ToString()
+            },
+            {
+                "captutureRate",
+                pokemon["captutureRate"]
+            },
+            {
+                "isShiny",
+                pokemon["isShiny"]
+            },
+            {
+                "hash",
+                pokemon["hash"]
+            }
+        };
+        SUP.ParseJsonToArguments(catchInfo.ToString());
+        SUP.ParseJsonToArguments(pokemon.ToString());
+        var catchMulti = settings.Poke_af_catch_multi;
+        string catchResult = SUP.CatchPokemon(catchInfo, streamUPStreamerKey, catchMulti, ballModifier[ballType]);
+        var ballName = SUP.GetBallName(ballType);
+        var ballURL = SUP.GetBallURL(ballType);
+        if (catchResult != "caught" && catchResult != "escaped")
+        {
+            SUP.LogError($"Catch Failed - {catchResult}");
+            CPH.RunActionById("46e55315-2c0a-4db5-a58b-e82ca3197774", false); //Reset Action
+            return false;
+        }
+
+        CPH.SetArgument("ballType", ballName);
+        CPH.TriggerCodeEvent("pafAnyBallThrown");
+        switch (ballType)
+        {
+            case "poke":
+                CPH.TriggerCodeEvent("pafPokeballThrown");
+                break;
+            case "great":
+                CPH.TriggerCodeEvent("pafGreatballThrown");
+                break;
+            case "ultra":
+                CPH.TriggerCodeEvent("pafUltraballThrown");
+                break;
+            case "master":
+                CPH.TriggerCodeEvent("pafMasterballThrown");
+                break;
+            default:
+                // optional logging
+                break;
+        }
+
+        string scene = "StreamUP Games - Pokémon";
+        string catchFilter = "MS - Pokeball Catch [1]";
+        string catchSuccess = "MS - Pokeball Catch [Success]";
+        string catchFail = "MS - Pokemon Base";
+        CPH.ObsSetBrowserSource("StreamUP Games - Pokémon", "StreamUP Games - Pokémon | Poke ball", $"https://streamup.tips/tools/imageloader?url={ballURL}", 0);
+        CPH.ObsSetFilterState(scene, catchFilter, 0, 0);
+        CPH.Wait(6000);
+        if (catchResult == "caught")
+        {
+            CPH.ObsSetFilterState(scene, catchSuccess, 0, 0);
+            CPH.RunActionById("46e55315-2c0a-4db5-a58b-e82ca3197774", false); //Reset Action
+            CPH.TriggerCodeEvent("pafCaptured");
+            CPH.SetGlobalVar(CatchInProgressGlobalName, false);
+            return true;
+        }
+
+        if (catchResult == "escaped")
+        {
+            CPH.ObsSetFilterState(scene, catchFail, 0, 0);
+            CPH.TriggerCodeEvent("pafCatchFailed");
+        }
+
+        //Pick Random Number between 1 and 2
+        CPH.Wait(1000);
+        int fleeOrNot = CPH.Between(1, 100);
+        //if 1 Flee
+        if (fleeOrNot < settings.Poke_af_flee_chance)
+        {
+            SUP.LogInfo("Pokémon fled!");
+            CPH.TriggerCodeEvent("pafFled");
+            CPH.RunActionById("46e55315-2c0a-4db5-a58b-e82ca3197774", false); //Reset Action
+        }
+        else
+        {
+            SUP.LogInfo("Pokémon Stayed!");
+            if (usingCommand)
+            {
+                CPH.UnPauseReward(rewardId);
+            }
+        }
+
+        CPH.SetGlobalVar(CatchInProgressGlobalName, false);
+        return true;
+    }
+
+    public class ProductInfo
+    {
+        [JsonProperty("productName")]
+        public string ProductName { get; set; } = "Pokemon And Friends";
+
+        [JsonProperty("productVersion")]
+        public string ProductVersion { get; set; } = "2.0.0.1";
+
+        [JsonProperty("productNumber")]
+        public string ProductNumber { get; set; } = "sup028";
+
+        [JsonProperty("productType")]
+        public string ProductType { get; set; } = "OBS";
+
+        [JsonProperty("author")]
+        public string Author { get; set; } = "StreamUP";
+
+        [JsonProperty("libraryVersion")]
+        public string LibraryVersion { get; set; } = "3.1.0.3";
+
+        [JsonProperty("menuName")]
+        public string MenuName { get; set; } = "Settings";
+
+        [JsonProperty("menuDescription")]
+        public string MenuDescription { get; set; } = "";
+
+        [JsonProperty("sceneName")]
+        public string SceneName { get; set; } = "StreamUP Games - Pokémon";
+
+        [JsonProperty("sourceName")]
+        public string SourceName { get; set; } = "StreamUP Games - Pokémon | Pokémon Sprite";
+
+        [JsonProperty("sceneVersion")]
+        public string SceneVersion { get; set; } = "1.0.1";
+    }
+
+    public class ProductSettings
+    {
+        [JsonProperty("poke_af_api_key")]
+        public string Poke_af_api_key { get; set; } = "";
+
+        [JsonProperty("poke_af_gens")]
+        public string Poke_af_gens { get; set; } = "2";
+
+        [JsonProperty("poke_af_lang_select")]
+        public string Poke_af_lang_select { get; set; } = "en";
+
+        [JsonProperty("poke_af_sprite_type")]
+        public string Poke_af_sprite_type { get; set; } = "Default";
+
+        [JsonProperty("poke_af_catch_multi")]
+        public double Poke_af_catch_multi { get; set; } = 1.0;
+
+        [JsonProperty("poke_af_shiny_chance")]
+        public double Poke_af_shiny_chance { get; set; } = 0.00390625;
+
+        [JsonProperty("poke_af_flee_chance")]
+        public double Poke_af_flee_chance { get; set; } = 50.0;
+
+        [JsonProperty("poke_af_seasonal")]
+        public bool Poke_af_seasonal { get; set; } = false;
+
+        [JsonProperty("poke_af_channel_redeem")]
+        public string Poke_af_channel_redeem { get; set; } = "";
+
+        [JsonProperty("poke_af_enable_poke")]
+        public bool Poke_af_enable_poke { get; set; } = true;
+
+        [JsonProperty("poke_af_pokeball")]
+        public double Poke_af_pokeball { get; set; } = 0.0;
+
+        [JsonProperty("poke_af_pokeball_use")]
+        public int Poke_af_pokeball_use { get; set; } = 65;
+
+        [JsonProperty("poke_af_enable_great")]
+        public bool Poke_af_enable_great { get; set; } = true;
+
+        [JsonProperty("poke_af_great_ball")]
+        public double Poke_af_great_ball { get; set; } = 0.1;
+
+        [JsonProperty("poke_af_greatball_use")]
+        public int Poke_af_greatball_use { get; set; } = 20;
+
+        [JsonProperty("poke_af_enable_ultra")]
+        public bool Poke_af_enable_ultra { get; set; } = true;
+
+        [JsonProperty("poke_af_ultra_ball")]
+        public double Poke_af_ultra_ball { get; set; } = 0.25;
+
+        [JsonProperty("poke_af_ultraball_use")]
+        public int Poke_af_ultraball_use { get; set; } = 10;
+
+        [JsonProperty("poke_af_enable_master")]
+        public bool Poke_af_enable_master { get; set; } = true;
+
+        [JsonProperty("poke_af_master_ball")]
+        public double Poke_af_master_ball { get; set; } = 1.0;
+
+        [JsonProperty("poke_af_masterball_use")]
+        public int Poke_af_masterball_use { get; set; } = 5;
+    }
+}
