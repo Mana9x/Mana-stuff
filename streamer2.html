@@ -42,6 +42,8 @@ body {
     -ms-overflow-style: none;
     display: flex;
     flex-direction: column-reverse;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 18%);
 }
 
 #chat-container::-webkit-scrollbar {
@@ -312,7 +314,7 @@ body {
 		// Auto-scroll to the latest message
 		chatContainer.scrollTop = chatContainer.scrollHeight;
 		
-		while (chatContainer.children.length > 20) {
+		while (chatContainer.children.length > 6) {
 			chatContainer.removeChild(chatContainer.lastChild);
 		}
 		
