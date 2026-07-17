@@ -63,7 +63,7 @@ body {
     color: #fff;
     opacity: 0;
     transform: translateY(-20px);
-    animation: slideFadeIn 0.5s ease forwards, border-cycle 6s linear infinite;
+    animation: slideFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards, border-cycle 6s linear infinite;
     position: relative;
     overflow: hidden;
     backdrop-filter: blur(16px) saturate(160%);
@@ -76,9 +76,9 @@ body {
 
 .message.fading-out {
     opacity: 0 !important;
-    transform: translateX(60px) scale(0.97) !important;
+    transform: translateY(8px) !important;
     animation: none !important;
-    transition: opacity 0.6s ease, transform 0.6s ease !important;
+    transition: opacity 0.5s ease, transform 0.5s ease !important;
 }
 
 .message:first-child {
@@ -122,11 +122,11 @@ body {
 @keyframes slideFadeIn {
     0% {
         opacity: 0;
-        transform: translateX(60px) scale(0.97);
+        transform: translateY(8px);
     }
     100% {
         opacity: 1;
-        transform: translateX(0) scale(1);
+        transform: translateY(0);
     }
 }
 
