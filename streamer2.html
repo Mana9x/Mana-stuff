@@ -42,8 +42,6 @@ body {
     -ms-overflow-style: none;
     display: flex;
     flex-direction: column-reverse;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%);
-    mask-image: linear-gradient(to bottom, transparent 0%, black 18%);
 }
 
 #chat-container::-webkit-scrollbar {
@@ -51,9 +49,9 @@ body {
 }
 
 .message {
-    background: rgba(15, 8, 35, 0.35);
-    padding: 12px 16px;
-    margin-bottom: 12px;
+    background: rgba(15, 8, 35, 0.68);
+    padding: 20px;
+    margin-bottom: 20px;
     border-radius: 18px;
     border: 2px solid rgba(160, 80, 255, 0.9);
     box-shadow:
@@ -71,6 +69,13 @@ body {
     word-wrap: break-word;
     max-width: 100%;
     flex-shrink: 0;
+    transition: opacity 0.8s ease;
+}
+
+.message.fading-out {
+    opacity: 0 !important;
+    animation: none;
+    transition: opacity 0.8s ease;
 }
 
 .message:first-child {
@@ -124,7 +129,7 @@ body {
 
 .name {
     color: #fff;
-    font-size: 24px;
+    font-size: 32px;
     font-weight: 700;
     text-shadow:
         0 0 10px rgba(255, 255, 255, 0.6),
@@ -148,7 +153,7 @@ body {
 }
 
 .text {
-    font-size: 28px;
+    font-size: 40px;
     font-weight: 700;
     line-height: 1.5;
     margin: 10px 0;
@@ -160,27 +165,27 @@ body {
 
 .text img {
     max-width: 100px;
-    max-height: 28px;
+    max-height: 32px;
     vertical-align: bottom;
     border-radius: 4px;
 }
 
 .donation {
-    color: #fde68a;
-    font-size: 24px;
+    color: #ffd700;
+    font-size: 32px;
     font-weight: 700;
     text-shadow:
-        0 0 10px rgba(253, 230, 138, 0.5),
-        0 0 20px rgba(253, 230, 138, 0.3);
+        0 0 10px rgba(255, 215, 0, 0.5),
+        0 0 20px rgba(255, 215, 0, 0.3);
     padding: 5px 10px;
     border-radius: 8px;
-    background: rgba(253, 230, 138, 0.1);
+    background: rgba(255, 215, 0, 0.1);
 }
 
 .membership-status {
     color: #ffd700;
     font-weight: 700;
-    font-size: 24px;
+    font-size: 32px;
     margin-bottom: 8px;
     text-shadow:
         0 0 8px rgba(255, 215, 0, 0.6),
@@ -197,8 +202,8 @@ body {
 }
 
 .avatar-wrapper {
-    width: 50px;
-    height: 50px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
     display: inline-block;
     margin-right: 15px;
@@ -229,8 +234,8 @@ body {
 }
 
 .source-icon {
-    width: 28px;
-    height: 28px;
+    width: 38px;
+    height: 38px;
     vertical-align: middle;
     position: relative;
     filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
@@ -239,7 +244,7 @@ body {
 
 .badge {
     display: inline-block;
-    height: 28px;
+    height: 38px;
     margin-left: 5px;
     vertical-align: middle;
     filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.4));
@@ -263,10 +268,32 @@ body {
 		roomID = urlParams.get("session");
 	}
 	var password = "false";
-	var featuredMode = false; // featured == selected messages only.  not featured == all messages.
-	
+	var featuredMode = false;
+
+	// ── Settings ──────────────────────────────────────────
+	var MAX_MESSAGES = 4;          // Max messages visible at once
+	var INACTIVITY_TIMEOUT = 15000; // Hide all messages after 15 seconds of silence
+	// ──────────────────────────────────────────────────────
+
 	const chatContainer = document.getElementById('chat-container');
-	
+	var inactivityTimer = null;
+
+	function clearAllMessages() {
+		Array.from(chatContainer.children).forEach(child => {
+			child.classList.add('fading-out');
+		});
+		setTimeout(() => {
+			while (chatContainer.firstChild) {
+				chatContainer.removeChild(chatContainer.firstChild);
+			}
+		}, 800); // Remove after fade completes
+	}
+
+	function resetInactivityTimer() {
+		if (inactivityTimer) clearTimeout(inactivityTimer);
+		inactivityTimer = setTimeout(clearAllMessages, INACTIVITY_TIMEOUT);
+	}
+
 	function addMessageToOverlay(data) {
 		
 		if (!(data.chatmessage || data.donation || data.hasDonation) && !data.chatname){
@@ -310,11 +337,9 @@ body {
 		});
 		
 		chatContainer.prepend(messageDiv);
-		
-		// Auto-scroll to the latest message
 		chatContainer.scrollTop = chatContainer.scrollHeight;
 		
-		while (chatContainer.children.length > 6) {
+		while (chatContainer.children.length > MAX_MESSAGES) {
 			chatContainer.removeChild(chatContainer.lastChild);
 		}
 		
@@ -322,10 +347,13 @@ body {
 			Array.from(chatContainer.children).forEach(child => {
 				child.style.transform = '';
 			});
-		}, 500); 
+		}, 500);
+
+		// Reset the inactivity timer on every new message
+		resetInactivityTimer();
 	}
 	
-	// The IFrame allows for peer to peer mode; used by default.  It may have issues if self-hosting this page though while using OBS v31 due to same-origin strict policies in CEF
+	// The IFrame allows for peer to peer mode; used by default.
 	var iframe = document.createElement("iframe");
 	if (featuredMode){
 		iframe.src = `https://vdo.socialstream.ninja/?ln&password=${password}&salt=vdo.ninja&label=overlay&exclude=${roomID}&scene&novideo&noaudio&cleanoutput&room=${roomID}`;
@@ -341,10 +369,9 @@ body {
 		}
 	});
 	
-	// The Websocket mode is an alternative to using p2p mode; useful if always use websocket mode.
+	// The Websocket mode is an alternative to using p2p mode.
 	var conCon = 1;
 	var socketserver = false;
-	// localserver mode can be used via the stand-alone app; file-> enable local server, or use the publicly hosted one.
 	var serverURL = urlParams.has("localserver") ? "ws://127.0.0.1:3000" : "wss://io.socialstream.ninja";
 
 	function setupSocket(){
@@ -375,7 +402,7 @@ body {
 		});
 	}
 	
-	if (urlParams.has("server") || urlParams.has("server2")){ // opt-in to use. Must also be enabled in the menu as well.
+	if (urlParams.has("server") || urlParams.has("server2")){
 		serverURL = urlParams.get("server") ||  urlParams.get("server2") || serverURL;
 		socketserver = new WebSocket(serverURL);
 		setupSocket();
