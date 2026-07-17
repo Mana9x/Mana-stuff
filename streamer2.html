@@ -76,8 +76,9 @@ body {
 
 .message.fading-out {
     opacity: 0 !important;
-    animation: none;
-    transition: opacity 0.8s ease;
+    transform: translateX(60px) scale(0.97) !important;
+    animation: none !important;
+    transition: opacity 0.6s ease, transform 0.6s ease !important;
 }
 
 .message:first-child {
@@ -121,11 +122,11 @@ body {
 @keyframes slideFadeIn {
     0% {
         opacity: 0;
-        transform: translateY(-20px) scale(0.95);
+        transform: translateX(60px) scale(0.97);
     }
     100% {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateX(0) scale(1);
     }
 }
 
@@ -274,7 +275,7 @@ body {
 
 	// ── Settings ──────────────────────────────────────────
 	var MAX_MESSAGES = 2;           // Max messages visible at once
-	var MESSAGE_LIFETIME = 10000;   // Each message disappears after 10 seconds
+	var MESSAGE_LIFETIME = 12000;   // Each message disappears after 12 seconds
 	// ──────────────────────────────────────────────────────
 
 	const chatContainer = document.getElementById('chat-container');
@@ -286,7 +287,7 @@ body {
 			if (messageDiv.parentNode) {
 				messageDiv.parentNode.removeChild(messageDiv);
 			}
-		}, 800);
+		}, 600);
 	}
 
 	function addMessageToOverlay(data) {
