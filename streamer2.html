@@ -41,7 +41,7 @@ body {
     scrollbar-width: none;
     -ms-overflow-style: none;
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
     -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%);
     mask-image: linear-gradient(to bottom, transparent 0%, black 18%);
 }
@@ -328,23 +328,13 @@ body {
 			${data.contentimg ? `<img src="${data.contentimg}" alt="Large Content" class="large-image" onerror="this.style.display='none';">` : ''}
 		`;
 		
-		Array.from(chatContainer.children).forEach(child => {
-			child.style.transform = 'translateY(' + messageDiv.offsetHeight + 'px)';
-		});
-		
 		chatContainer.prepend(messageDiv);
-		chatContainer.scrollTop = chatContainer.scrollHeight;
+		chatContainer.scrollTop = 0;
 		
 		while (chatContainer.children.length > MAX_MESSAGES) {
 			chatContainer.removeChild(chatContainer.lastChild);
 		}
 		
-		setTimeout(() => {
-			Array.from(chatContainer.children).forEach(child => {
-				child.style.transform = '';
-			});
-		}, 500);
-
 		// Each message manages its own lifetime independently
 		setTimeout(() => removeMessage(messageDiv), MESSAGE_LIFETIME);
 	}
