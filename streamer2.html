@@ -42,6 +42,8 @@ body {
     -ms-overflow-style: none;
     display: flex;
     flex-direction: column-reverse;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 18%);
 }
 
 #chat-container::-webkit-scrollbar {
@@ -49,9 +51,9 @@ body {
 }
 
 .message {
-    background: rgba(15, 8, 35, 0.68);
-    padding: 20px;
-    margin-bottom: 20px;
+    background: rgba(15, 8, 35, 0.35);
+    padding: 12px 16px;
+    margin-bottom: 12px;
     border-radius: 18px;
     border: 2px solid rgba(160, 80, 255, 0.9);
     box-shadow:
@@ -129,7 +131,7 @@ body {
 
 .name {
     color: #fff;
-    font-size: 32px;
+    font-size: 24px;
     font-weight: 700;
     text-shadow:
         0 0 10px rgba(255, 255, 255, 0.6),
@@ -153,7 +155,7 @@ body {
 }
 
 .text {
-    font-size: 40px;
+    font-size: 28px;
     font-weight: 700;
     line-height: 1.5;
     margin: 10px 0;
@@ -165,27 +167,27 @@ body {
 
 .text img {
     max-width: 100px;
-    max-height: 32px;
+    max-height: 28px;
     vertical-align: bottom;
     border-radius: 4px;
 }
 
 .donation {
-    color: #ffd700;
-    font-size: 32px;
+    color: #fde68a;
+    font-size: 24px;
     font-weight: 700;
     text-shadow:
-        0 0 10px rgba(255, 215, 0, 0.5),
-        0 0 20px rgba(255, 215, 0, 0.3);
+        0 0 10px rgba(253, 230, 138, 0.5),
+        0 0 20px rgba(253, 230, 138, 0.3);
     padding: 5px 10px;
     border-radius: 8px;
-    background: rgba(255, 215, 0, 0.1);
+    background: rgba(253, 230, 138, 0.1);
 }
 
 .membership-status {
     color: #ffd700;
     font-weight: 700;
-    font-size: 32px;
+    font-size: 24px;
     margin-bottom: 8px;
     text-shadow:
         0 0 8px rgba(255, 215, 0, 0.6),
@@ -202,8 +204,8 @@ body {
 }
 
 .avatar-wrapper {
-    width: 70px;
-    height: 70px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     display: inline-block;
     margin-right: 15px;
@@ -234,8 +236,8 @@ body {
 }
 
 .source-icon {
-    width: 38px;
-    height: 38px;
+    width: 28px;
+    height: 28px;
     vertical-align: middle;
     position: relative;
     filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
@@ -244,7 +246,7 @@ body {
 
 .badge {
     display: inline-block;
-    height: 38px;
+    height: 28px;
     margin-left: 5px;
     vertical-align: middle;
     filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.4));
@@ -271,7 +273,7 @@ body {
 	var featuredMode = false;
 
 	// ── Settings ──────────────────────────────────────────
-	var MAX_MESSAGES = 4;          // Max messages visible at once
+	var MAX_MESSAGES = 4;           // Max messages visible at once
 	var INACTIVITY_TIMEOUT = 15000; // Hide all messages after 15 seconds of silence
 	// ──────────────────────────────────────────────────────
 
@@ -286,7 +288,7 @@ body {
 			while (chatContainer.firstChild) {
 				chatContainer.removeChild(chatContainer.firstChild);
 			}
-		}, 800); // Remove after fade completes
+		}, 800);
 	}
 
 	function resetInactivityTimer() {
@@ -349,7 +351,6 @@ body {
 			});
 		}, 500);
 
-		// Reset the inactivity timer on every new message
 		resetInactivityTimer();
 	}
 	
