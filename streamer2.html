@@ -273,27 +273,20 @@ body {
 	var featuredMode = false;
 
 	// ── Settings ──────────────────────────────────────────
-	var MAX_MESSAGES = 4;           // Max messages visible at once
-	var INACTIVITY_TIMEOUT = 15000; // Hide all messages after 15 seconds of silence
+	var MAX_MESSAGES = 2;           // Max messages visible at once
+	var MESSAGE_LIFETIME = 10000;   // Each message disappears after 10 seconds
 	// ──────────────────────────────────────────────────────
 
 	const chatContainer = document.getElementById('chat-container');
-	var inactivityTimer = null;
 
-	function clearAllMessages() {
-		Array.from(chatContainer.children).forEach(child => {
-			child.classList.add('fading-out');
-		});
+	function removeMessage(messageDiv) {
+		if (!messageDiv.parentNode) return; // Already removed
+		messageDiv.classList.add('fading-out');
 		setTimeout(() => {
-			while (chatContainer.firstChild) {
-				chatContainer.removeChild(chatContainer.firstChild);
+			if (messageDiv.parentNode) {
+				messageDiv.parentNode.removeChild(messageDiv);
 			}
 		}, 800);
-	}
-
-	function resetInactivityTimer() {
-		if (inactivityTimer) clearTimeout(inactivityTimer);
-		inactivityTimer = setTimeout(clearAllMessages, INACTIVITY_TIMEOUT);
 	}
 
 	function addMessageToOverlay(data) {
@@ -351,10 +344,9 @@ body {
 			});
 		}, 500);
 
-		resetInactivityTimer();
+		// Each message manages its own lifetime independently
+		setTimeout(() => removeMessage(messageDiv), MESSAGE_LIFETIME);
 	}
-	
-	// The IFrame allows for peer to peer mode; used by default.
 	var iframe = document.createElement("iframe");
 	if (featuredMode){
 		iframe.src = `https://vdo.socialstream.ninja/?ln&password=${password}&salt=vdo.ninja&label=overlay&exclude=${roomID}&scene&novideo&noaudio&cleanoutput&room=${roomID}`;
