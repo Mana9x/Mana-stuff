@@ -1,0 +1,82 @@
+using System;
+
+public class CPHInline
+{
+    public bool Execute()
+    {
+        // ── Read featured items ──
+        string slot1Name   = CPH.GetGlobalVar<string>("GachaSlot1Name",   true) ?? "";
+        string slot1Rarity = CPH.GetGlobalVar<string>("GachaSlot1Rarity", true) ?? "";
+        string slot1Slot   = CPH.GetGlobalVar<string>("GachaSlot1Slot",   true) ?? "";
+
+        string slot2Name   = CPH.GetGlobalVar<string>("GachaSlot2Name",   true) ?? "";
+        string slot2Rarity = CPH.GetGlobalVar<string>("GachaSlot2Rarity", true) ?? "";
+        string slot2Slot   = CPH.GetGlobalVar<string>("GachaSlot2Slot",   true) ?? "";
+
+        string slot3Name   = CPH.GetGlobalVar<string>("GachaSlot3Name",   true) ?? "";
+        string slot3Rarity = CPH.GetGlobalVar<string>("GachaSlot3Rarity", true) ?? "";
+        string slot3Slot   = CPH.GetGlobalVar<string>("GachaSlot3Slot",   true) ?? "";
+
+        if (string.IsNullOrEmpty(slot1Name) || string.IsNullOrEmpty(slot2Name) || string.IsNullOrEmpty(slot3Name))
+        {
+            CPH.SendMessage("🎲 No gacha rotation is currently active. Check back soon!");
+            return false;
+        }
+
+        string cost1   = GetCost(slot1Rarity);
+        string cost2   = GetCost(slot2Rarity);
+        string cost3   = GetCost(slot3Rarity);
+        string emoji1  = GetRarityEmoji(slot1Rarity);
+        string emoji2  = GetRarityEmoji(slot2Rarity);
+        string emoji3  = GetRarityEmoji(slot3Rarity);
+        string slabel1 = GetSlotLabel(slot1Slot);
+        string slabel2 = GetSlotLabel(slot2Slot);
+        string slabel3 = GetSlotLabel(slot3Slot);
+
+        CPH.SendMessage(
+            $"🎲 GACHA ROTATION | " +
+            $"Type !pull 1 → {emoji1} {slot1Name} [{slabel1} · {slot1Rarity}] {cost1} gems | " +
+            $"Type !pull 2 → {emoji2} {slot2Name} [{slabel2} · {slot2Rarity}] {cost2} gems | " +
+            $"Type !pull 3 → {emoji3} {slot3Name} [{slabel3} · {slot3Rarity}] {cost3} gems | " +
+            $"💎 Subscribers only!"
+        );
+
+        return true;
+    }
+
+    private string GetCost(string rarity)
+    {
+        switch (rarity)
+        {
+            case "Legendary":  return "800";
+            case "Ultra-Rare": return "500";
+            case "Rare":       return "200";
+            default:           return "200";
+        }
+    }
+
+    private string GetRarityEmoji(string rarity)
+    {
+        switch (rarity)
+        {
+            case "Legendary":  return "🌟";
+            case "Ultra-Rare": return "🔥";
+            case "Rare":       return "💠";
+            default:           return "🎲";
+        }
+    }
+
+    private string GetSlotLabel(string slot)
+    {
+        switch (slot)
+        {
+            case "weapon":    return "Weapon";
+            case "offhand":   return "Offhand";
+            case "armor":     return "Armor";
+            case "helmet":    return "Helmet";
+            case "boots":     return "Boots";
+            case "accessory": return "Accessory";
+            default:          return slot;
+        }
+    }
+}
