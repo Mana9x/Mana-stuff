@@ -1,0 +1,271 @@
+using System;
+using System.Collections.Generic;
+
+public class CPHInline
+{
+    public bool Execute()
+    {
+        // ── Full Item Pool ──
+        // Each entry: (display name, item id, slot, rarity)
+        var pool = new List<(string name, string id, string slot, string rarity)>
+        {
+            // ── WEAPONS — LEGENDARY ──
+            ("Buster Sword",               "buster_sword",               "weapon", "Legendary"),
+            ("Masamune Katana",            "masamune_katana",            "weapon", "Legendary"),
+            ("Ragnarok Sword",             "ragnarok_sword",             "weapon", "Legendary"),
+            ("Excalibur Sword",            "excalibur_sword",            "weapon", "Legendary"),
+            ("Ultima Weapon",              "ultima_weapon",              "weapon", "Legendary"),
+            ("Thor's Hammer",              "thors_hammer",               "weapon", "Legendary"),
+            ("Staff of the Magi",          "staff_of_the_magi",          "weapon", "Legendary"),
+            ("Worldroot Staff",            "worldroot_staff",            "weapon", "Legendary"),
+            ("Sanctified War Mace",        "sanctified_war_mace",        "weapon", "Legendary"),
+            ("Lute of Legends",            "lute_of_legends",            "weapon", "Legendary"),
+            ("Fists of the Mountain Gauntlets", "fists_of_the_mountain", "weapon", "Legendary"),
+            ("Windrunner Longbow",         "windrunner_longbow",         "weapon", "Legendary"),
+            ("Portalweaver Staff",         "portalweaver_staff",         "weapon", "Legendary"),
+            ("Warlord's Greataxe",         "warlords_greataxe",          "weapon", "Legendary"),
+            ("Assassin's Composite Bow",   "assassins_composite_bow",    "weapon", "Legendary"),
+            ("Bow of the Ancient Forest",  "bow_of_the_ancient_forest",  "weapon", "Legendary"),
+            ("Shadowstep Dagger",          "shadowstep_dagger",          "weapon", "Legendary"),
+            ("Blade of the Last Breath",   "blade_of_the_last_breath",   "weapon", "Legendary"),
+
+            // ── WEAPONS — ULTRA-RARE ──
+            ("Murasame Katana",            "murasame_katana",            "weapon", "Ultra-Rare"),
+            ("Hardedge Longsword",         "hardedge_longsword",         "weapon", "Ultra-Rare"),
+            ("Force Stealer Blade",        "force_stealer_blade",        "weapon", "Ultra-Rare"),
+            ("Dragon Claws Gauntlets",     "dragon_claws_gauntlets",     "weapon", "Ultra-Rare"),
+            ("Usuno's Blade",              "usunos_blade",               "weapon", "Ultra-Rare"),
+            ("Yamato Katana",              "yamato_katana",              "weapon", "Ultra-Rare"),
+            ("Staff of the High Forest",   "staff_of_the_high_forest",   "weapon", "Ultra-Rare"),
+            ("Rod of Lordly Might",        "rod_of_lordly_might",        "weapon", "Ultra-Rare"),
+            ("Void Channeler Staff",       "void_channeler_staff",       "weapon", "Ultra-Rare"),
+            ("Mace of Radiance",           "mace_of_radiance",           "weapon", "Ultra-Rare"),
+            ("Battle Harp",               "battle_harp",                "weapon", "Ultra-Rare"),
+            ("Wraps of the Grandmaster",   "wraps_of_the_grandmaster",   "weapon", "Ultra-Rare"),
+            ("Stormshot Longbow",          "stormshot_longbow",          "weapon", "Ultra-Rare"),
+            ("Conjurer's Focus Wand",      "conjurers_focus_wand",       "weapon", "Ultra-Rare"),
+
+            // ── WEAPONS — RARE ──
+            ("Organics Chainsaw",          "organics_chainsaw",          "weapon", "Rare"),
+            ("Chain Saw",                  "chain_saw",                  "weapon", "Rare"),
+            ("Drill",                      "drill",                      "weapon", "Rare"),
+            ("Bio Blaster",               "bio_blaster",                "weapon", "Rare"),
+            ("Air Anchor",                "air_anchor",                 "weapon", "Rare"),
+            ("Tiger Fang Claws",           "tiger_fang_claws",           "weapon", "Rare"),
+            ("Blade of Searing",           "blade_of_searing",           "weapon", "Rare"),
+            ("Frostreaver Axe",            "frostreaver_axe",            "weapon", "Rare"),
+            ("Lilarcor Longsword",         "lilarcor_longsword",         "weapon", "Rare"),
+            ("Belm Shortsword",            "belm_shortsword",            "weapon", "Rare"),
+            ("Tuigan Longbow",             "tuigan_longbow",             "weapon", "Rare"),
+            ("Stonefire Axe",              "stonefire_axe",              "weapon", "Rare"),
+            ("Arcane Wand",               "arcane_wand",                "weapon", "Rare"),
+            ("Thornbound Staff",           "thornbound_staff",           "weapon", "Rare"),
+            ("Blessed Warhammer",          "blessed_warhammer",          "weapon", "Rare"),
+            ("Songblade Rapier",           "songblade_rapier",           "weapon", "Rare"),
+            ("Training Handwraps",         "training_handwraps",         "weapon", "Rare"),
+            ("Hunter's Longbow",           "hunters_longbow",            "weapon", "Rare"),
+
+            // ── OFFHANDS — LEGENDARY ──
+            ("Orb of Cataclysm",           "orb_of_cataclysm",           "offhand", "Legendary"),
+            ("Spiritcaller Totem",         "spiritcaller_totem",         "offhand", "Legendary"),
+            ("Bulwark of the Iron Vanguard","bulwark_iron_vanguard",     "offhand", "Legendary"),
+            ("Quiver of Infinite Bolts",   "quiver_of_infinite_bolts",   "offhand", "Legendary"),
+
+            // ── OFFHANDS — ULTRA-RARE ──
+            ("Genji Shield",               "genji_shield",               "offhand", "Ultra-Rare"),
+            ("Reflection Shield",          "reflection_shield",          "offhand", "Ultra-Rare"),
+            ("Shield of Harmony",          "shield_of_harmony",          "offhand", "Ultra-Rare"),
+            ("Fortress Shield",            "fortress_shield",            "offhand", "Ultra-Rare"),
+            ("Spellbinder Tome",           "spellbinder_tome",           "offhand", "Ultra-Rare"),
+            ("Elemental Conduit Totem",    "elemental_conduit_totem",    "offhand", "Ultra-Rare"),
+            ("Grimoire of Beasts",         "grimoire_of_beasts",         "offhand", "Ultra-Rare"),
+            ("Viper's Fang Dagger",        "vipers_fang_dagger",         "offhand", "Ultra-Rare"),
+
+            // ── OFFHANDS — RARE ──
+            ("Cursed Shield",              "cursed_shield",              "offhand", "Rare"),
+            ("Buckler of the Chosen",      "buckler_of_the_chosen",      "offhand", "Rare"),
+            ("Thunder Shield",             "thunder_shield",             "offhand", "Rare"),
+            ("Dragon Scale Shield",        "dragon_scale_shield",        "offhand", "Rare"),
+            ("Shield of the Lost",         "shield_of_the_lost",         "offhand", "Rare"),
+            ("Tower Shield of the Phalanx","tower_shield_phalanx",       "offhand", "Rare"),
+            ("Enchanted Spellbook",        "enchanted_spellbook",        "offhand", "Rare"),
+            ("Totem of Embers",            "totem_of_embers",            "offhand", "Rare"),
+            ("Quiver of True Aim",         "quiver_of_true_aim",         "offhand", "Rare"),
+
+            // ── ARMOR — LEGENDARY ──
+            ("Dragon Mail",                "dragon_mail",                "armor", "Legendary"),
+            ("Robe of Vecna",              "robe_of_vecna",              "armor", "Legendary"),
+            ("Stormbinder Raiment",        "stormbinder_raiment",        "armor", "Legendary"),
+            ("Mantle of the Virtuoso",     "mantle_of_the_virtuoso",     "armor", "Legendary"),
+            ("Robes of Inner Balance",     "robes_of_inner_balance",     "armor", "Legendary"),
+            ("Berserker's Mantle",         "berserkers_mantle",          "armor", "Legendary"),
+            ("Pauldrons of the Eternal Oath","pauldrons_eternal_oath",   "armor", "Legendary"),
+
+            // ── ARMOR — ULTRA-RARE ──
+            ("Genji Armor",                "genji_armor",                "armor", "Ultra-Rare"),
+            ("Behemoth Suit",              "behemoth_suit",              "armor", "Ultra-Rare"),
+            ("Robe of Lords",              "robe_of_lords",              "armor", "Ultra-Rare"),
+            ("Grandmaster's Armor",        "grandmasters_armor",         "armor", "Ultra-Rare"),
+            ("Naturewoven Garb",           "naturewoven_garb",           "armor", "Ultra-Rare"),
+            ("Summoner's Mantle",          "summoners_mantle",           "armor", "Ultra-Rare"),
+
+            // ── ARMOR — RARE ──
+            ("Dark Armor",                 "dark_armor",                 "armor", "Rare"),
+            ("Hades Armor",               "hades_armor",                "armor", "Rare"),
+            ("Gaia Gear",                  "gaia_gear",                  "armor", "Rare"),
+            ("Ankheg Plate Mail",          "ankheg_plate_mail",          "armor", "Rare"),
+            ("Dark Elven Chain",           "dark_elven_chain",           "armor", "Rare"),
+            ("Mail of the Dead",           "mail_of_the_dead",           "armor", "Rare"),
+            ("Crimson Chain",              "crimson_chain",              "armor", "Rare"),
+            ("Jester's Chain",             "jesters_chain",              "armor", "Rare"),
+
+            // ── HELMETS — LEGENDARY ──
+            ("Crown of the Wilds",         "crown_of_the_wilds",         "helmet", "Legendary"),
+            ("Helm of the Fallen King",    "helm_of_the_fallen_king",    "helmet", "Legendary"),
+            ("Circlet of Arcane Mastery",  "circlet_arcane_mastery",     "helmet", "Legendary"),
+            ("Death's Cowl",               "deaths_cowl",                "helmet", "Legendary"),
+
+            // ── HELMETS — ULTRA-RARE ──
+            ("Genji Helmet",               "genji_helmet",               "helmet", "Ultra-Rare"),
+            ("Helm of Balduran",           "helm_of_balduran",           "helmet", "Ultra-Rare"),
+            ("Hypnocrown",                 "hypnocrown",                 "helmet", "Ultra-Rare"),
+            ("Tempestcaller Helm",         "tempestcaller_helm",         "helmet", "Ultra-Rare"),
+            ("Halo of the Faithful",       "halo_of_the_faithful",       "helmet", "Ultra-Rare"),
+            ("Tracker's Hood",             "trackers_hood",              "helmet", "Ultra-Rare"),
+            ("Headband of Focus",          "headband_of_focus",          "helmet", "Ultra-Rare"),
+
+            // ── HELMETS — RARE ──
+            ("Dragon Helm",                "dragon_helm",                "helmet", "Rare"),
+            ("Eyes of the Beholder",       "eyes_of_the_beholder",       "helmet", "Rare"),
+            ("Helm of Charm Protection",   "helm_charm_protection",      "helmet", "Rare"),
+            ("Helm of Defense",            "helm_of_defense",            "helmet", "Rare"),
+            ("Helmet of Dumathoin",        "helmet_of_dumathoin",        "helmet", "Rare"),
+            ("Helm of the Watchman",       "helm_of_the_watchman",       "helmet", "Rare"),
+
+            // ── BOOTS — LEGENDARY ──
+            ("Hermes Sandals",             "hermes_sandals",             "boots", "Legendary"),
+            ("Greaves of the Iron Wall",   "greaves_iron_wall",          "boots", "Legendary"),
+            ("Shadowstep Boots",           "shadowstep_boots",           "boots", "Legendary"),
+            ("Stormchaser's Treads",       "stormchasers_treads",        "boots", "Legendary"),
+            ("Pilgrim's Sacred Sandals",   "pilgrims_sacred_sandals",    "boots", "Legendary"),
+
+            // ── BOOTS — ULTRA-RARE ──
+            ("Boots of Speed",             "boots_of_speed",             "boots", "Ultra-Rare"),
+            ("Seven League Boots",         "seven_league_boots",         "boots", "Ultra-Rare"),
+            ("Boots of Phasing",           "boots_of_phasing",           "boots", "Ultra-Rare"),
+
+            // ── BOOTS — RARE ──
+            ("Boots of Avoidance",         "boots_of_avoidance",         "boots", "Rare"),
+            ("Boots of Elvenkind",         "boots_of_elvenkind",         "boots", "Rare"),
+            ("Boots of Etherealness",      "boots_of_etherealness",      "boots", "Rare"),
+            ("Boots of Stealth",           "boots_of_stealth",           "boots", "Rare"),
+            ("Boots of the North",         "boots_of_the_north",         "boots", "Rare"),
+            ("Adventurer's Sturdy Boots",  "adventurers_sturdy_boots",   "boots", "Rare"),
+            ("Windstep Sandals",           "windstep_sandals",           "boots", "Rare"),
+            ("Performer's Boots",          "performers_boots",           "boots", "Rare"),
+            ("Sandals of Tranquility",     "sandals_of_tranquility",     "boots", "Rare"),
+
+            // ── ACCESSORIES — LEGENDARY ──
+            ("Ring of Gaxx",               "ring_of_gaxx",               "accessory", "Legendary"),
+            ("Genji Glove",                "genji_glove",                "accessory", "Legendary"),
+            ("Ribbon Charm",               "ribbon_charm",               "accessory", "Legendary"),
+            ("Tetra Elemental Amulet",     "tetra_elemental_amulet",     "accessory", "Legendary"),
+            ("Bag of Holding",             "bag_of_holding",             "accessory", "Legendary"),
+            ("Grimoire of Eternal Night",  "grimoire_eternal_night",     "accessory", "Legendary"),
+            ("Relic of Divine Judgment",   "relic_divine_judgment",      "accessory", "Legendary"),
+            ("Cloak of the Silent Hunt",   "cloak_silent_hunt",          "accessory", "Legendary"),
+            ("Core of Binding",            "core_of_binding",            "accessory", "Legendary"),
+
+            // ── ACCESSORIES — ULTRA-RARE ──
+            ("Hero Ring",                  "hero_ring",                  "accessory", "Ultra-Rare"),
+            ("Fury Ring",                  "fury_ring",                  "accessory", "Ultra-Rare"),
+            ("Protect Ring",               "protect_ring",               "accessory", "Ultra-Rare"),
+            ("Malla's Soul Stone Amulet",  "mallas_soul_stone",          "accessory", "Ultra-Rare"),
+            ("Heartwood Ring",             "heartwood_ring",             "accessory", "Ultra-Rare"),
+            ("Cloak of Reflection",        "cloak_of_reflection",        "accessory", "Ultra-Rare"),
+            ("Amulet of Cheetah Speed",    "amulet_cheetah_speed",       "accessory", "Ultra-Rare"),
+            ("Crescendo Cloak",            "crescendo_cloak",            "accessory", "Ultra-Rare"),
+            ("Bloodlust Ring",             "bloodlust_ring",             "accessory", "Ultra-Rare"),
+            ("Cloak of the Wilderness",    "cloak_of_the_wilderness",    "accessory", "Ultra-Rare"),
+            ("Rogue's Shadow Wrap",        "rogues_shadow_wrap",         "accessory", "Ultra-Rare"),
+            ("Assassin's Poison Sigil",    "assassins_poison_sigil",     "accessory", "Ultra-Rare"),
+
+            // ── ACCESSORIES — RARE ──
+            ("Ring of Protection",         "ring_of_protection",         "accessory", "Rare"),
+            ("Ring of Fire Resistance",    "ring_fire_resistance",       "accessory", "Rare"),
+            ("Ring of Free Action",        "ring_of_free_action",        "accessory", "Rare"),
+            ("Sandthief's Ring",           "sandthiefs_ring",            "accessory", "Rare"),
+            ("Gauntlets of Ogre Power",    "gauntlets_ogre_power",       "accessory", "Rare"),
+            ("Bracers of Defense",         "bracers_of_defense",         "accessory", "Rare"),
+            ("Cloak of Protection",        "cloak_of_protection",        "accessory", "Rare"),
+            ("Cloak of Elvenkind",         "cloak_of_elvenkind",         "accessory", "Rare"),
+            ("Belt of Minor Invulnerability","belt_minor_invulnerability","accessory", "Rare"),
+            ("Amulet of Health",           "amulet_of_health",           "accessory", "Rare"),
+            ("Harper Pin",                 "harper_pin",                 "accessory", "Rare"),
+            ("Periapt of Proof Against Poison","periapt_proof_poison",   "accessory", "Rare"),
+            ("Beastcaller Pendant",        "beastcaller_pendant",        "accessory", "Rare"),
+            ("Holy Symbol of Light",       "holy_symbol_of_light",       "accessory", "Rare"),
+            ("Summoner's Sigil",           "summoners_sigil",            "accessory", "Rare"),
+        };
+
+        Random rng = new Random();
+
+        // ── Pick 3 unique items ──
+        int idx1 = rng.Next(pool.Count);
+
+        int idx2;
+        do { idx2 = rng.Next(pool.Count); } while (idx2 == idx1);
+
+        int idx3;
+        do { idx3 = rng.Next(pool.Count); } while (idx3 == idx1 || idx3 == idx2);
+
+        var item1 = pool[idx1];
+        var item2 = pool[idx2];
+        var item3 = pool[idx3];
+
+        // ── Store featured items as globals ──
+        CPH.SetGlobalVar("GachaSlot1Name",   item1.name,   true);
+        CPH.SetGlobalVar("GachaSlot1Id",     item1.id,     true);
+        CPH.SetGlobalVar("GachaSlot1Slot",   item1.slot,   true);
+        CPH.SetGlobalVar("GachaSlot1Rarity", item1.rarity, true);
+
+        CPH.SetGlobalVar("GachaSlot2Name",   item2.name,   true);
+        CPH.SetGlobalVar("GachaSlot2Id",     item2.id,     true);
+        CPH.SetGlobalVar("GachaSlot2Slot",   item2.slot,   true);
+        CPH.SetGlobalVar("GachaSlot2Rarity", item2.rarity, true);
+
+        CPH.SetGlobalVar("GachaSlot3Name",   item3.name,   true);
+        CPH.SetGlobalVar("GachaSlot3Id",     item3.id,     true);
+        CPH.SetGlobalVar("GachaSlot3Slot",   item3.slot,   true);
+        CPH.SetGlobalVar("GachaSlot3Rarity", item3.rarity, true);
+
+        // ── Store rotation timestamp ──
+        CPH.SetGlobalVar("GachaLastRotation", DateTime.UtcNow.ToString("o"), true);
+
+        // ── Announce new rotation in chat ──
+        string emoji1  = GetRarityEmoji(item1.rarity);
+        string emoji2  = GetRarityEmoji(item2.rarity);
+        string emoji3  = GetRarityEmoji(item3.rarity);
+
+        CPH.SendMessage(
+            $"🎲 NEW GACHA ROTATION IS LIVE! " +
+            $"[1] {emoji1} {item1.name} [{item1.rarity}] | " +
+            $"[2] {emoji2} {item2.name} [{item2.rarity}] | " +
+            $"[3] {emoji3} {item3.name} [{item3.rarity}] | " +
+            $"Type !pull 1, !pull 2, or !pull 3 to pull! 💎 Subscribers only!"
+        );
+
+        return true;
+    }
+
+    private string GetRarityEmoji(string rarity)
+    {
+        switch (rarity)
+        {
+            case "Legendary":  return "🌟";
+            case "Ultra-Rare": return "🔥";
+            case "Rare":       return "💠";
+            default:           return "🎲";
+        }
+    }
+}
