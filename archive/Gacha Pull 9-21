@@ -1,0 +1,344 @@
+using System;
+
+public class CPHInline
+{
+    // ── Single shared RNG instance to prevent identical seeds on rapid pulls ──
+    private static readonly Random rng = new Random();
+
+    public bool Execute()
+    {
+        string user = args["user"].ToString();
+
+        // ── Check for input ──
+        if (!args.ContainsKey("rawInput") || string.IsNullOrWhiteSpace(args["rawInput"].ToString()))
+        {
+            CPH.SendMessage($"@{user} Please specify a slot to pull! Type !gacha to see the current rotation, then use !pull 1, !pull 2, or !pull 3.");
+            return false;
+        }
+
+        string input = args["rawInput"].ToString().Trim();
+
+        // ── Read featured items ──
+        string slot1Name   = CPH.GetGlobalVar<string>("GachaSlot1Name",   true) ?? "";
+        string slot1Rarity = CPH.GetGlobalVar<string>("GachaSlot1Rarity", true) ?? "";
+        string slot1Slot   = CPH.GetGlobalVar<string>("GachaSlot1Slot",   true) ?? "";
+        string slot1Id     = CPH.GetGlobalVar<string>("GachaSlot1Id",     true) ?? "";
+
+        string slot2Name   = CPH.GetGlobalVar<string>("GachaSlot2Name",   true) ?? "";
+        string slot2Rarity = CPH.GetGlobalVar<string>("GachaSlot2Rarity", true) ?? "";
+        string slot2Slot   = CPH.GetGlobalVar<string>("GachaSlot2Slot",   true) ?? "";
+        string slot2Id     = CPH.GetGlobalVar<string>("GachaSlot2Id",     true) ?? "";
+
+        string slot3Name   = CPH.GetGlobalVar<string>("GachaSlot3Name",   true) ?? "";
+        string slot3Rarity = CPH.GetGlobalVar<string>("GachaSlot3Rarity", true) ?? "";
+        string slot3Slot   = CPH.GetGlobalVar<string>("GachaSlot3Slot",   true) ?? "";
+        string slot3Id     = CPH.GetGlobalVar<string>("GachaSlot3Id",     true) ?? "";
+
+        if (string.IsNullOrEmpty(slot1Name) || string.IsNullOrEmpty(slot2Name) || string.IsNullOrEmpty(slot3Name))
+        {
+            CPH.SendMessage($"@{user} No gacha rotation is currently active. Check back soon!");
+            return false;
+        }
+
+        // ── Match input to slot number ──
+        string itemName   = "";
+        string itemRarity = "";
+        string itemSlot   = "";
+        string itemId     = "";
+        string slotNumber = "";
+
+        if (input == "1")
+        {
+            itemName   = slot1Name;
+            itemRarity = slot1Rarity;
+            itemSlot   = slot1Slot;
+            itemId     = slot1Id;
+            slotNumber = "1";
+        }
+        else if (input == "2")
+        {
+            itemName   = slot2Name;
+            itemRarity = slot2Rarity;
+            itemSlot   = slot2Slot;
+            itemId     = slot2Id;
+            slotNumber = "2";
+        }
+        else if (input == "3")
+        {
+            itemName   = slot3Name;
+            itemRarity = slot3Rarity;
+            itemSlot   = slot3Slot;
+            itemId     = slot3Id;
+            slotNumber = "3";
+        }
+        else
+        {
+            // ── Invalid input — remind them of the format and show current rotation ──
+            string emoji1 = GetRarityEmoji(slot1Rarity);
+            string emoji2 = GetRarityEmoji(slot2Rarity);
+            string emoji3 = GetRarityEmoji(slot3Rarity);
+            CPH.SendMessage(
+                $"@{user} Invalid slot! Use !pull 1, !pull 2, or !pull 3. " +
+                $"Current rotation: [1] {emoji1} {slot1Name} [{slot1Rarity}] | " +
+                $"[2] {emoji2} {slot2Name} [{slot2Rarity}] | " +
+                $"[3] {emoji3} {slot3Name} [{slot3Rarity}]"
+            );
+            return false;
+        }
+
+        // ── Get gem cost for this rarity ──
+        int cost = GetCost(itemRarity);
+
+        // ── Check gem balance ──
+        int currentPoints = CPH.GetTwitchUserVar<int>(user, "points", true);
+        if (currentPoints < cost)
+        {
+            CPH.SendMessage($"@{user} Not enough gems! Pulling {itemName} costs {cost} gems and you only have {currentPoints} gems. 💎 Keep earning and try again!");
+            return false;
+        }
+
+        // ── Deduct gems immediately ──
+        int newBalance = currentPoints - cost;
+        CPH.SetTwitchUserVar(user, "points", newBalance, true);
+
+        // ── Read pity counter ──
+        string pityVarKey = $"gacha_pity_{itemRarity.ToLower().Replace("-", "")}";
+        int pityKey       = CPH.GetTwitchUserVar<int>(user, pityVarKey, true);
+        int pityLimit     = GetPityLimit(itemRarity);
+
+        // ── Calculate scaled success chance based on pity progress ──
+        //    At pity 0:         nearly impossible (base rate only)
+        //    Approaching limit: climbs steeply toward 100%
+        //    At pity limit:     guaranteed (100%)
+        double chance = GetScaledChance(itemRarity, pityKey, pityLimit);
+
+        // ── Send hype message ──
+        string hypeMessage = GetHypeMessage(user, itemName, itemRarity);
+        CPH.SendMessage(hypeMessage);
+
+        // ── Delay for dramatic effect ──
+        CPH.Wait(5000);
+
+        // ── Roll for success (0.0 to 100.0) ──
+        double roll    = rng.NextDouble() * 100.0;
+        bool   success = roll < chance;
+
+        if (success)
+        {
+            // ── Reset pity on success ──
+            CPH.SetTwitchUserVar(user, pityVarKey, 0, true);
+
+            // ── Write item to inventory ──
+            CPH.SetTwitchUserVar(user, $"equip_{itemSlot}",        itemName,   true);
+            CPH.SetTwitchUserVar(user, $"equip_{itemSlot}_rarity", itemRarity, true);
+            CPH.SetTwitchUserVar(user, $"equip_{itemSlot}_id",     itemId,     true);
+
+            // ── Send success message ──
+            string successMessage = GetSuccessMessage(user, itemName, itemRarity);
+            CPH.SendMessage(successMessage);
+
+            // ── Trigger VTube dance animation ──
+            CPH.SetArgument("gachaPullSuccess", true);
+        }
+        else
+        {
+            // ── Increment pity on failure ──
+            CPH.SetTwitchUserVar(user, pityVarKey, pityKey + 1, true);
+
+            // ── Send fail message with slot number for easy retry ──
+            string failMessage = GetFailMessage(user, itemName, itemRarity, slotNumber);
+            CPH.SendMessage(failMessage);
+        }
+
+        return true;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  SCALING CHANCE
+    //  Formula: chance = baseRate + (pity / limit)^curve * (100 - baseRate)
+    //
+    //  At pity = 0:      chance ≈ baseRate (nearly impossible)
+    //  At pity = limit:  chance = 100% (guaranteed)
+    //  The curve exponent controls how aggressively it ramps up.
+    //  Higher curve = stays low longer, then spikes hard near the end.
+    //
+    //  Rarity settings:
+    //    Rare:       baseRate 1.5%,  pityLimit 40,  curve 2.0
+    //    Ultra-Rare: baseRate 0.5%,  pityLimit 80,  curve 2.5
+    //    Legendary:  baseRate 0.1%,  pityLimit 120, curve 3.0
+    //
+    //  Example pull chances:
+    //    Rare       — pull #1: ~1.5%  | pull #20: ~26%  | pull #35: ~81%
+    //    Ultra-Rare — pull #1: ~0.5%  | pull #40: ~25%  | pull #70: ~82%
+    //    Legendary  — pull #1: ~0.1%  | pull #60: ~25%  | pull #105: ~81%
+    // ──────────────────────────────────────────────────────────────
+    private double GetScaledChance(string rarity, int pityKey, int pityLimit)
+    {
+        double baseRate;
+        double curve;
+
+        switch (rarity)
+        {
+            case "Legendary":
+                baseRate = 0.1;
+                curve    = 3.0;
+                break;
+            case "Ultra-Rare":
+                baseRate = 0.5;
+                curve    = 2.5;
+                break;
+            case "Rare":
+            default:
+                baseRate = 1.5;
+                curve    = 2.0;
+                break;
+        }
+
+        // Clamp pity so it never exceeds the limit (guarantees 100% at cap)
+        int clampedPity = Math.Min(pityKey, pityLimit);
+
+        double progress = (double)clampedPity / (double)pityLimit;
+        double chance   = baseRate + Math.Pow(progress, curve) * (100.0 - baseRate);
+
+        return chance;
+    }
+
+    // ── Costs per rarity ──
+    private int GetCost(string rarity)
+    {
+        switch (rarity)
+        {
+            case "Legendary":  return 800;
+            case "Ultra-Rare": return 500;
+            case "Rare":       return 200;
+            default:           return 200;
+        }
+    }
+
+    // ── Pity limits per rarity ──
+    private int GetPityLimit(string rarity)
+    {
+        switch (rarity)
+        {
+            case "Legendary":  return 120;
+            case "Ultra-Rare": return 80;
+            case "Rare":       return 40;
+            default:           return 40;
+        }
+    }
+
+    private string GetRarityEmoji(string rarity)
+    {
+        switch (rarity)
+        {
+            case "Legendary":  return "🌟";
+            case "Ultra-Rare": return "🔥";
+            case "Rare":       return "💠";
+            default:           return "🎲";
+        }
+    }
+
+    // ── Hype messages per rarity ──
+    private string GetHypeMessage(string user, string itemName, string rarity)
+    {
+        switch (rarity)
+        {
+            case "Rare":
+                string[] rareHype = {
+                    $"💠 @{user} reaches into the gacha and draws for {itemName}... something is stirring...",
+                    $"💠 @{user} tosses their gems in and pulls for {itemName}... the anticipation builds...",
+                    $"💠 @{user} takes their shot at {itemName}... the gacha responds...",
+                };
+                return rareHype[rng.Next(rareHype.Length)];
+
+            case "Ultra-Rare":
+                string[] ultraHype = {
+                    $"🔥 @{user} channels their luck and reaches for {itemName}... the energy in the room shifts...",
+                    $"🔥 @{user} digs deep and pulls for {itemName}... something powerful stirs in the gacha...",
+                    $"🔥 @{user} closes their eyes and draws for {itemName}... the air crackles with possibility...",
+                };
+                return ultraHype[rng.Next(ultraHype.Length)];
+
+            case "Legendary":
+                string[] legendHype = {
+                    $"⚡ THE CHAT GOES SILENT... @{user} is pulling for {itemName}, a LEGENDARY item... fate itself holds its breath...",
+                    $"⚡ ALL EYES ON @{user}... they are attempting to claim the LEGENDARY {itemName}... the gacha trembles...",
+                    $"⚡ @{user} steps forward with everything on the line... reaching for the LEGENDARY {itemName}... destiny decides now...",
+                };
+                return legendHype[rng.Next(legendHype.Length)];
+
+            default:
+                return $"🎲 @{user} is pulling for {itemName}...";
+        }
+    }
+
+    // ── Success messages per rarity ──
+    private string GetSuccessMessage(string user, string itemName, string rarity)
+    {
+        string equipNote = "Added to inventory!";
+
+        switch (rarity)
+        {
+            case "Rare":
+                string[] rareSuccess = {
+                    $"💠 @{user} PULLED IT! {itemName} [Rare] secured! {equipNote} Well played! 🎉",
+                    $"💠 YES! @{user} claims the {itemName} [Rare]! {equipNote} The gacha delivers! 🎉",
+                    $"💠 @{user} walks away victorious with {itemName} [Rare]! {equipNote} Nicely done! 🎉",
+                };
+                return rareSuccess[rng.Next(rareSuccess.Length)];
+
+            case "Ultra-Rare":
+                string[] ultraSuccess = {
+                    $"🔥🔥 ULTRA-RARE PULL! @{user} has claimed {itemName}! {equipNote} Incredible luck! PogChamp 🔥",
+                    $"🔥🔥 @{user} DOES IT! {itemName} [Ultra-Rare] is theirs! {equipNote} Chat, are you seeing this?! 🔥",
+                    $"🔥🔥 THE GACHA YIELDS! @{user} pulls {itemName} [Ultra-Rare]! {equipNote} What a moment! 🔥",
+                };
+                return ultraSuccess[rng.Next(ultraSuccess.Length)];
+
+            case "Legendary":
+                string[] legendSuccess = {
+                    $"🌟🌟🌟 LEGENDARY!!! @{user} HAS PULLED {itemName}!!! THIS IS HISTORY! {equipNote} CHAT EXPLODE! 🌟🌟🌟",
+                    $"🌟🌟🌟 THE IMPOSSIBLE! @{user} CLAIMS THE LEGENDARY {itemName}! {equipNote} WE ARE WITNESSING GREATNESS! 🌟🌟🌟",
+                    $"🌟🌟🌟 LEGENDARY OBTAINED! @{user} AND {itemName} ARE NOW ONE! {equipNote} BOW DOWN TO THE CHOSEN ONE! 🌟🌟🌟",
+                };
+                return legendSuccess[rng.Next(legendSuccess.Length)];
+
+            default:
+                return $"🎉 @{user} successfully pulled {itemName}! {equipNote}";
+        }
+    }
+
+    // ── Fail messages — retry prompt uses slot number so no typing required ──
+    private string GetFailMessage(string user, string itemName, string rarity, string slotNumber)
+    {
+        switch (rarity)
+        {
+            case "Rare":
+                string[] rareFail = {
+                    $"💠 @{user} came up empty this time... {itemName} slipped away. Fortune favors the persistent — try again with !pull {slotNumber}!",
+                    $"💠 Not this time, @{user}! {itemName} wasn't meant to be today. Keep at it with !pull {slotNumber}!",
+                    $"💠 @{user} reaches in but pulls nothing... {itemName} remains just out of reach. Don't stop now — !pull {slotNumber}!",
+                };
+                return rareFail[rng.Next(rareFail.Length)];
+
+            case "Ultra-Rare":
+                string[] ultraFail = {
+                    $"🔥 @{user} fought for {itemName} but it fades away... So close! The ultra-rare still awaits — !pull {slotNumber}!",
+                    $"🔥 The gacha holds on to {itemName} for now, @{user}. It won't resist forever... !pull {slotNumber}!",
+                    $"🔥 @{user} reaches deep but {itemName} slips through their fingers... The hunt continues — !pull {slotNumber}!",
+                };
+                return ultraFail[rng.Next(ultraFail.Length)];
+
+            case "Legendary":
+                string[] legendFail = {
+                    $"⚡ @{user} gave everything but {itemName} remains unclaimed... Legends are not won easily. Destiny will come. !pull {slotNumber}",
+                    $"⚡ The LEGENDARY {itemName} holds firm against @{user} today... but the story isn't over. Keep pulling — !pull {slotNumber}!",
+                    $"⚡ @{user} and {itemName} were not fated to meet today... The legend endures. Will you rise to claim it? !pull {slotNumber}",
+                };
+                return legendFail[rng.Next(legendFail.Length)];
+
+            default:
+                return $"@{user} didn't pull {itemName} this time. Try again with !pull {slotNumber}!";
+        }
+    }
+}
